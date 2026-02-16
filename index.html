@@ -8,248 +8,136 @@
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
 <style>
 :root {
-  --bg:       #07070f;
-  --bg2:      #0d0d1a;
-  --bg3:      #131326;
-  --border:   #1e1e3a;
-  --border2:  #2a2a50;
-  --text:     #c0c0da;
-  --text-dim: #50506a;
-  --text-hi:  #f0f0ff;
-  --accent:   #00d4ff;
-  --red:      #ff2060;
-  --green:    #40ff80;
-  --yellow:   #ffd030;
-  --font-d:   'Bebas Neue', sans-serif;
-  --font-m:   'Space Mono', monospace;
-  --r:        4px;
+  --bg:#07070f;--bg2:#0d0d1a;--bg3:#131326;
+  --border:#1e1e3a;--border2:#2a2a50;
+  --text:#c0c0da;--text-dim:#50506a;--text-hi:#f0f0ff;
+  --accent:#00d4ff;--red:#ff2060;--green:#40ff80;--yellow:#ffd030;
+  --font-d:'Bebas Neue',sans-serif;--font-m:'Space Mono',monospace;--r:4px;
 }
 *{box-sizing:border-box;margin:0;padding:0;}
 html,body{height:100%;overflow-x:hidden;}
 body{background:var(--bg);color:var(--text);font-family:var(--font-m);font-size:11px;line-height:1.5;}
+::-webkit-scrollbar{width:4px;}::-webkit-scrollbar-track{background:var(--bg);}::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px;}
 
-/* ── SCROLLBAR ── */
-::-webkit-scrollbar{width:4px;}
-::-webkit-scrollbar-track{background:var(--bg);}
-::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px;}
-
-/* ── HEADER ── */
-#header{
-  display:flex;align-items:center;gap:16px;padding:10px 16px;
-  background:var(--bg2);border-bottom:1px solid var(--border);
-  position:sticky;top:0;z-index:10;
-}
+#header{display:flex;align-items:center;gap:16px;padding:10px 16px;background:var(--bg2);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:10;}
 #logo{font-family:var(--font-d);font-size:28px;letter-spacing:2px;color:var(--text-hi);line-height:1;}
 #logo span{color:var(--accent);}
 #tagline{color:var(--text-dim);font-size:10px;margin-top:2px;}
-#header-right{margin-left:auto;display:flex;align-items:center;gap:12px;}
+#header-right{margin-left:auto;display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
 #midi-status-dot{width:8px;height:8px;border-radius:50%;background:var(--text-dim);flex-shrink:0;transition:.3s;}
 #midi-status-dot.ok{background:var(--green);box-shadow:0 0 8px var(--green);}
 #midi-status-dot.err{background:var(--red);box-shadow:0 0 8px var(--red);}
 #midi-status-dot.active{background:var(--accent);box-shadow:0 0 8px var(--accent);}
-#midi-label{color:var(--text-dim);font-size:10px;}
-select{
-  background:var(--bg3);border:1px solid var(--border2);color:var(--text);
-  font-family:var(--font-m);font-size:11px;padding:4px 8px;border-radius:var(--r);
-  cursor:pointer;outline:none;
-}
+#midi-label{color:var(--text-dim);font-size:10px;white-space:nowrap;}
+select{background:var(--bg3);border:1px solid var(--border2);color:var(--text);font-family:var(--font-m);font-size:11px;padding:4px 8px;border-radius:var(--r);cursor:pointer;outline:none;}
 select:focus{border-color:var(--accent);}
 
-/* ── MAIN LAYOUT ── */
-#main{display:flex;gap:0;height:calc(100vh - 53px);}
+#main{display:flex;height:calc(100vh - 53px);}
 #left-panel{flex:1;min-width:0;display:flex;flex-direction:column;border-right:1px solid var(--border);}
 #right-panel{width:300px;overflow-y:auto;flex-shrink:0;}
 
-/* ── VIDEO AREA ── */
 #video-wrap{position:relative;background:#000;flex:1;min-height:0;overflow:hidden;}
 #display-canvas{width:100%;height:100%;object-fit:contain;display:block;}
 video{display:none;}
-#no-cam{
-  position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;
-  justify-content:center;gap:8px;color:var(--text-dim);
-}
+#no-cam{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;color:var(--text-dim);}
 #no-cam .icon{font-size:40px;}
-#learn-overlay{
-  position:absolute;inset:0;pointer-events:none;
-  display:flex;align-items:center;justify-content:center;
-  opacity:0;transition:.2s;
-}
-#learn-overlay.active{opacity:1;pointer-events:auto;cursor:crosshair;}
-#learn-overlay-bg{
-  position:absolute;inset:0;background:rgba(0,212,255,0.08);
-  border:2px solid var(--accent);
-}
-#learn-overlay-text{
-  background:rgba(0,212,255,0.9);color:#000;
-  font-family:var(--font-d);font-size:22px;letter-spacing:2px;
-  padding:8px 20px;border-radius:var(--r);position:relative;
-}
+#clock-flash{position:absolute;top:8px;right:8px;width:10px;height:10px;border-radius:50%;background:var(--yellow);opacity:0;pointer-events:none;box-shadow:0 0 10px var(--yellow);}
+#clock-flash.beat{opacity:1;transition:opacity .02s;}
+#clock-flash.fadeout{opacity:0;transition:opacity .15s;}
 
-/* ── STATS BAR ── */
-#stats-bar{
-  display:flex;gap:0;border-top:1px solid var(--border);
-  background:var(--bg2);flex-shrink:0;
-}
-.stat{
-  flex:1;padding:6px 10px;border-right:1px solid var(--border);
-  display:flex;flex-direction:column;gap:1px;
-}
+#playback-bar{display:none;border-top:1px solid var(--border);background:var(--bg2);padding:6px 10px;gap:8px;align-items:center;flex-shrink:0;}
+#playback-bar.visible{display:flex;}
+#scrubber{flex:1;-webkit-appearance:none;appearance:none;height:4px;background:var(--border2);border-radius:2px;outline:none;cursor:pointer;}
+#scrubber::-webkit-slider-thumb{-webkit-appearance:none;width:12px;height:12px;border-radius:50%;background:var(--yellow);cursor:pointer;}
+#time-display{color:var(--text-dim);font-size:10px;white-space:nowrap;min-width:72px;text-align:right;}
+
+#stats-bar{display:flex;border-top:1px solid var(--border);background:var(--bg2);flex-shrink:0;}
+.stat{flex:1;padding:6px 10px;border-right:1px solid var(--border);display:flex;flex-direction:column;gap:1px;}
 .stat:last-child{border-right:none;}
 .stat-label{color:var(--text-dim);font-size:9px;letter-spacing:1px;}
-.stat-val{color:var(--text-hi);font-size:13px;font-weight:700;}
+.stat-val{color:var(--text-hi);font-size:12px;font-weight:700;}
 .stat-val.active{color:var(--accent);}
 
-/* ── RIGHT PANEL / MODULES ── */
 .module{border-bottom:1px solid var(--border);padding:12px;}
-.module-title{
-  font-family:var(--font-d);font-size:16px;letter-spacing:1px;
-  color:var(--text-hi);margin-bottom:10px;display:flex;align-items:center;gap:8px;
-}
-.module-title .dot{
-  width:6px;height:6px;border-radius:50%;background:var(--accent);
-  flex-shrink:0;
-}
-
-/* ── CONTROLS ── */
+.module-title{font-family:var(--font-d);font-size:16px;letter-spacing:1px;color:var(--text-hi);margin-bottom:10px;display:flex;align-items:center;gap:8px;}
+.dot{width:6px;height:6px;border-radius:50%;background:var(--accent);flex-shrink:0;}
 .row{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
 .row:last-child{margin-bottom:0;}
 label{color:var(--text-dim);font-size:10px;letter-spacing:.5px;white-space:nowrap;min-width:28px;}
-.val-box{
-  background:var(--bg);border:1px solid var(--border);
-  color:var(--accent);font-family:var(--font-m);font-size:11px;
-  padding:2px 6px;border-radius:2px;min-width:36px;text-align:right;
-  flex-shrink:0;
-}
+.val-box{background:var(--bg);border:1px solid var(--border);color:var(--accent);font-family:var(--font-m);font-size:11px;padding:2px 6px;border-radius:2px;min-width:38px;text-align:right;flex-shrink:0;}
 
-/* ── RANGE SLIDERS ── */
-input[type=range]{
-  -webkit-appearance:none;appearance:none;
-  flex:1;height:4px;background:var(--border2);border-radius:2px;outline:none;cursor:pointer;
-}
-input[type=range]::-webkit-slider-thumb{
-  -webkit-appearance:none;appearance:none;
-  width:14px;height:14px;border-radius:50%;
-  background:var(--accent);cursor:pointer;
-  box-shadow:0 0 6px var(--accent);transition:.1s;
-}
-input[type=range]::-webkit-slider-thumb:hover{width:16px;height:16px;}
-input[type=range].red-track::-webkit-slider-thumb{background:var(--red);box-shadow:0 0 6px var(--red);}
-input[type=range].green-track::-webkit-slider-thumb{background:var(--green);box-shadow:0 0 6px var(--green);}
+input[type=range]{-webkit-appearance:none;appearance:none;flex:1;height:4px;background:var(--border2);border-radius:2px;outline:none;cursor:pointer;}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:var(--accent);cursor:pointer;box-shadow:0 0 6px var(--accent);}
+input[type=range].rs::-webkit-slider-thumb{background:var(--red);box-shadow:0 0 6px var(--red);}
+input[type=range].gs::-webkit-slider-thumb{background:var(--green);box-shadow:0 0 6px var(--green);}
+input[type=range].ys::-webkit-slider-thumb{background:var(--yellow);box-shadow:0 0 6px var(--yellow);}
 
-/* ── HUE SPECTRUM ── */
 #hue-spectrum-wrap{margin:8px 0;position:relative;}
 #hue-spectrum{width:100%;height:20px;border-radius:var(--r);display:block;}
-#hue-range-indicator{
-  position:absolute;top:0;height:100%;pointer-events:none;
-  border:2px solid #fff;border-radius:var(--r);opacity:.8;
-  box-shadow:0 0 8px rgba(255,255,255,.4);
-}
-#hue-center-line{
-  position:absolute;top:0;width:2px;height:100%;background:#fff;
-  transform:translateX(-50%);opacity:.9;pointer-events:none;
-}
+#hue-range-indicator{position:absolute;top:0;height:100%;pointer-events:none;border:2px solid #fff;border-radius:var(--r);opacity:.8;box-shadow:0 0 8px rgba(255,255,255,.3);}
+#hue-center-line{position:absolute;top:0;width:2px;height:100%;background:#fff;transform:translateX(-50%);opacity:.9;pointer-events:none;}
+#color-swatch{width:100%;height:22px;border-radius:var(--r);border:1px solid var(--border);margin-bottom:8px;transition:background .2s;}
 
-/* ── COLOR SWATCH ── */
-#color-swatch-row{display:flex;gap:6px;align-items:stretch;margin:8px 0;}
-#color-swatch{
-  flex:1;height:36px;border-radius:var(--r);
-  border:1px solid var(--border);transition:.2s;
-}
-#learn-btn{
-  background:transparent;border:1px solid var(--accent);
-  color:var(--accent);font-family:var(--font-d);font-size:14px;
-  letter-spacing:1px;padding:4px 12px;border-radius:var(--r);
-  cursor:pointer;transition:.15s;white-space:nowrap;
-}
-#learn-btn:hover{background:var(--accent);color:#000;}
-#learn-btn.learning{background:var(--accent);color:#000;animation:pulse 1s infinite;}
-@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.6;}}
-
-/* ── BUTTONS ── */
-.btn{
-  background:var(--bg3);border:1px solid var(--border2);
-  color:var(--text);font-family:var(--font-m);font-size:11px;
-  padding:5px 10px;border-radius:var(--r);cursor:pointer;transition:.15s;
-}
+.btn{background:var(--bg3);border:1px solid var(--border2);color:var(--text);font-family:var(--font-m);font-size:11px;padding:5px 10px;border-radius:var(--r);cursor:pointer;transition:.15s;}
 .btn:hover{border-color:var(--accent);color:var(--accent);}
-.btn.danger:hover{border-color:var(--red);color:var(--red);}
 .btn.active{background:var(--accent);color:#000;border-color:var(--accent);}
+#panic-btn{background:transparent;border:1px solid var(--red);color:var(--red);font-family:var(--font-d);font-size:14px;letter-spacing:1px;padding:3px 10px;border-radius:var(--r);cursor:pointer;transition:.15s;}
+#panic-btn:hover{background:var(--red);color:#000;}
 
-/* ── TOGGLES ── */
-.toggle-row{display:flex;align-items:center;gap:8px;margin-bottom:6px;cursor:pointer;}
-.toggle{
-  width:28px;height:14px;background:var(--border2);border-radius:7px;
-  position:relative;transition:.2s;flex-shrink:0;cursor:pointer;
-}
+#mode-tabs{display:flex;margin-bottom:10px;border:1px solid var(--border2);border-radius:var(--r);overflow:hidden;}
+.mode-tab{flex:1;text-align:center;padding:5px;cursor:pointer;font-family:var(--font-d);font-size:13px;letter-spacing:1px;color:var(--text-dim);background:var(--bg);border:none;transition:.15s;}
+.mode-tab.active{background:var(--accent);color:#000;}
+.mode-tab:hover:not(.active){color:var(--text);}
+#cam-controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+#file-controls{display:none;gap:8px;flex-direction:column;}
+#file-controls.open{display:flex;}
+#file-drop{border:1px dashed var(--border2);border-radius:var(--r);padding:12px;text-align:center;color:var(--text-dim);font-size:10px;cursor:pointer;transition:.2s;}
+#file-drop:hover,#file-drop.dragover{border-color:var(--accent);color:var(--accent);}
+#file-input{display:none;}
+#file-playback{display:none;gap:6px;align-items:center;flex-wrap:wrap;}
+#file-playback.open{display:flex;}
+.pb-btn{background:var(--bg3);border:1px solid var(--border2);color:var(--text);font-family:var(--font-m);font-size:10px;padding:3px 8px;border-radius:var(--r);cursor:pointer;transition:.15s;}
+.pb-btn:hover{border-color:var(--accent);color:var(--accent);}
+.pb-btn.active{background:var(--yellow);color:#000;border-color:var(--yellow);}
+
+.toggle{width:28px;height:14px;background:var(--border2);border-radius:7px;position:relative;transition:.2s;flex-shrink:0;cursor:pointer;}
 .toggle.on{background:var(--accent);}
-.toggle::after{
-  content:'';position:absolute;top:2px;left:2px;
-  width:10px;height:10px;border-radius:50%;background:#fff;
-  transition:.2s;
-}
+.toggle::after{content:'';position:absolute;top:2px;left:2px;width:10px;height:10px;border-radius:50%;background:#fff;transition:.2s;}
 .toggle.on::after{transform:translateX(14px);}
 .toggle-label{color:var(--text);font-size:10px;flex:1;}
-.toggle-cc{color:var(--text-dim);font-size:10px;font-style:italic;}
-
-/* ── CC ROUTING MINI SELECTS ── */
 .cc-row{display:flex;align-items:center;gap:6px;margin-bottom:5px;}
-.cc-row .toggle-label{min-width:80px;}
-.cc-row select{font-size:10px;padding:2px 4px;}
+.cc-row select{font-size:10px;padding:2px 4px;width:56px;}
 
-/* ── ACTIVITY LOG ── */
-#activity-log{
-  background:var(--bg);border:1px solid var(--border);border-radius:var(--r);
-  height:120px;overflow-y:auto;padding:4px;
-}
-.log-entry{
-  font-size:10px;padding:2px 0;border-bottom:1px solid var(--border);
-  display:flex;gap:8px;color:var(--text-dim);
-}
+/* BPM gate module */
+#bpm-display{font-family:var(--font-d);font-size:38px;letter-spacing:2px;color:var(--text-hi);text-align:center;padding:2px 0 8px;line-height:1;}
+#bpm-display span{font-size:14px;color:var(--text-dim);vertical-align:middle;margin-left:4px;}
+#tap-btn{width:100%;padding:10px;background:var(--bg3);border:1px solid var(--border2);color:var(--text);font-family:var(--font-d);font-size:18px;letter-spacing:2px;border-radius:var(--r);cursor:pointer;transition:.1s;margin-bottom:8px;user-select:none;}
+#tap-btn:active,#tap-btn.flash{background:var(--yellow);color:#000;border-color:var(--yellow);}
+.subdiv-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin-bottom:8px;}
+.sdv{background:var(--bg3);border:1px solid var(--border2);color:var(--text-dim);font-family:var(--font-m);font-size:10px;padding:4px 0;border-radius:var(--r);cursor:pointer;text-align:center;transition:.15s;}
+.sdv:hover{color:var(--text);}
+.sdv.active{background:var(--yellow);color:#000;border-color:var(--yellow);}
+#midi-clk-row{display:flex;align-items:center;gap:8px;}
+#midi-clk-dot{width:8px;height:8px;border-radius:50%;background:var(--text-dim);flex-shrink:0;transition:.1s;}
+#midi-clk-dot.on{background:var(--yellow);box-shadow:0 0 8px var(--yellow);}
+
+#activity-log{background:var(--bg);border:1px solid var(--border);border-radius:var(--r);height:110px;overflow-y:auto;padding:4px;}
+.log-entry{font-size:10px;padding:2px 0;border-bottom:1px solid var(--border);display:flex;gap:8px;color:var(--text-dim);}
 .log-entry:last-child{border-bottom:none;}
-.log-entry .log-type{color:var(--accent);font-weight:700;min-width:28px;}
-.log-entry .log-type.noteon{color:var(--green);}
-.log-entry .log-type.noteoff{color:var(--red);}
-.log-entry .log-type.cc{color:var(--yellow);}
+.ltype{font-weight:700;min-width:30px;}
+.ltype.noteon{color:var(--green);}.ltype.noteoff{color:var(--red);}.ltype.cc{color:var(--yellow);}
 
-/* ── HELP ── */
-#help-toggle{
-  width:100%;text-align:left;cursor:pointer;
-  background:var(--bg2);border:none;color:var(--text-dim);
-  font-family:var(--font-d);font-size:14px;letter-spacing:1px;
-  padding:10px 12px;display:flex;justify-content:space-between;align-items:center;
-}
+#help-toggle{width:100%;text-align:left;cursor:pointer;background:var(--bg2);border:none;color:var(--text-dim);font-family:var(--font-d);font-size:14px;letter-spacing:1px;padding:10px 12px;display:flex;justify-content:space-between;}
 #help-toggle:hover{color:var(--text);}
 #help-content{display:none;padding:10px 12px;font-size:10px;color:var(--text-dim);line-height:1.7;}
 #help-content.open{display:block;}
 #help-content h4{color:var(--text);margin:8px 0 4px;font-size:11px;}
 #help-content p{margin-bottom:6px;}
-#help-content code{
-  background:var(--bg3);color:var(--accent);padding:1px 4px;
-  border-radius:2px;font-family:var(--font-m);
-}
-
-/* ── FOOTER ── */
-#footer{
-  border-top:1px solid var(--border);padding:6px 16px;
-  background:var(--bg2);display:flex;justify-content:space-between;align-items:center;
-  font-size:10px;color:var(--text-dim);
-}
-
-/* ── MIDI PANIC ── */
-#panic-btn{
-  background:transparent;border:1px solid var(--red);color:var(--red);
-  font-family:var(--font-d);font-size:14px;letter-spacing:1px;
-  padding:3px 10px;border-radius:var(--r);cursor:pointer;transition:.15s;
-}
-#panic-btn:hover{background:var(--red);color:#000;}
-
-/* ── MIRROR CHECKBOX ── */
-.flip-canvas{transform:scaleX(-1);}
+#help-content code{background:var(--bg3);color:var(--accent);padding:1px 4px;border-radius:2px;font-family:var(--font-m);}
 </style>
 </head>
 <body>
 
-<!-- ════════════ HEADER ════════════ -->
 <div id="header">
   <div>
     <div id="logo">CHRO<span>MIDI</span></div>
@@ -258,61 +146,49 @@ input[type=range].green-track::-webkit-slider-thumb{background:var(--green);box-
   <div id="header-right">
     <div id="midi-status-dot"></div>
     <div id="midi-label">NO MIDI</div>
-    <select id="midi-output-select" title="MIDI Output Device">
-      <option value="">— Select MIDI Output —</option>
-    </select>
-    <button id="panic-btn" title="All Notes Off">⏹ PANIC</button>
+    <select id="midi-output-select"><option value="">— Select MIDI Output —</option></select>
+    <button id="panic-btn">⏹ PANIC</button>
   </div>
 </div>
 
-<!-- ════════════ MAIN ════════════ -->
 <div id="main">
-
-  <!-- ── LEFT: VIDEO ── -->
   <div id="left-panel">
     <div id="video-wrap">
       <canvas id="display-canvas"></canvas>
       <video id="video" autoplay playsinline muted style="display:none;"></video>
       <div id="no-cam">
         <div class="icon">📷</div>
-        <div>Click <strong>START CAMERA</strong> to begin</div>
+        <div>Choose <strong>CAMERA</strong> or <strong>FILE</strong> then press start</div>
       </div>
-      <div id="learn-overlay">
-        <div id="learn-overlay-bg"></div>
-        <div id="learn-overlay-text">CLICK TO SAMPLE COLOR</div>
-      </div>
+      <div id="clock-flash"></div>
+    </div>
+
+    <div id="playback-bar">
+      <input type="range" id="scrubber" min="0" max="100" value="0" step="0.01">
+      <div id="time-display">0:00 / 0:00</div>
     </div>
 
     <div id="stats-bar">
-      <div class="stat">
-        <div class="stat-label">BLOBS</div>
-        <div class="stat-val" id="stat-area">—</div>
-      </div>
-      <div class="stat">
-        <div class="stat-label">HUE·SAT·VAL</div>
-        <div class="stat-val" id="stat-hsv">—</div>
-      </div>
-      <div class="stat">
-        <div class="stat-label">CENTROID X·Y</div>
-        <div class="stat-val" id="stat-xy">—</div>
-      </div>
-      <div class="stat">
-        <div class="stat-label">MIDI NOTE</div>
-        <div class="stat-val active" id="stat-note">—</div>
-      </div>
+      <div class="stat"><div class="stat-label">BLOBS</div><div class="stat-val" id="stat-blobs">—</div></div>
+      <div class="stat"><div class="stat-label">HUE·SAT·VAL</div><div class="stat-val" id="stat-hsv">—</div></div>
+      <div class="stat"><div class="stat-label">CLOCK</div><div class="stat-val" id="stat-clock">FREE</div></div>
+      <div class="stat"><div class="stat-label">MIDI NOTES</div><div class="stat-val active" id="stat-note">—</div></div>
     </div>
   </div>
 
-  <!-- ── RIGHT: CONTROLS ── -->
   <div id="right-panel">
 
-    <!-- Camera Start -->
+    <!-- INPUT SOURCE -->
     <div class="module">
-      <div class="row" style="gap:8px;flex-wrap:wrap;">
-        <button class="btn" id="start-cam-btn">▶ START CAMERA</button>
+      <div class="module-title"><div class="dot"></div>INPUT SOURCE</div>
+      <div id="mode-tabs">
+        <button class="mode-tab active" id="tab-cam">CAMERA</button>
+        <button class="mode-tab" id="tab-file">FILE</button>
+      </div>
+      <div id="cam-controls">
+        <button class="btn" id="start-cam-btn">▶ START</button>
         <label style="min-width:auto;display:flex;align-items:center;gap:4px;cursor:pointer;color:var(--text);">
-          <input type="checkbox" id="mirror-toggle" style="cursor:pointer;">
-          MIRROR
+          <input type="checkbox" id="mirror-toggle" style="cursor:pointer;"> MIRROR
         </label>
         <select id="resolution-select" style="font-size:10px;">
           <option value="640x480">640×480</option>
@@ -320,59 +196,79 @@ input[type=range].green-track::-webkit-slider-thumb{background:var(--green);box-
           <option value="320x240">320×240 (fast)</option>
         </select>
       </div>
+      <div id="file-controls">
+        <div id="file-drop">
+          <div>DROP VIDEO FILE HERE</div>
+          <div style="margin-top:4px;font-size:9px;">or click to browse · mp4 mov webm</div>
+          <input type="file" id="file-input" accept="video/*">
+        </div>
+        <div id="file-playback">
+          <button class="pb-btn" id="play-pause-btn">▶ PLAY</button>
+          <button class="pb-btn" id="loop-btn">↺ LOOP</button>
+          <select id="speed-select" style="font-size:10px;padding:2px 6px;">
+            <option value="0.125">⅛×</option>
+            <option value="0.25">¼×</option>
+            <option value="0.5">½×</option>
+            <option value="1" selected>1×</option>
+            <option value="2">2×</option>
+            <option value="4">4×</option>
+          </select>
+          <button class="pb-btn" id="unload-btn" style="margin-left:auto;color:var(--red);border-color:var(--red);">✕</button>
+        </div>
+      </div>
     </div>
 
     <!-- COLOR DETECT -->
     <div class="module">
       <div class="module-title"><div class="dot"></div>COLOR DETECT</div>
-
       <div id="hue-spectrum-wrap">
         <canvas id="hue-spectrum" height="20"></canvas>
         <div id="hue-range-indicator"></div>
         <div id="hue-center-line"></div>
       </div>
+      <div id="color-swatch"></div>
+      <div class="row"><label>HUE</label><input type="range" id="hue-center" min="0" max="359" value="120"><div class="val-box" id="hue-center-val">120°</div></div>
+      <div class="row"><label>TOL±</label><input type="range" id="hue-tol" min="1" max="90" value="20"><div class="val-box" id="hue-tol-val">±20</div></div>
+      <div class="row"><label>S MIN</label><input type="range" id="s-min" min="0" max="100" value="40" class="rs"><div class="val-box" id="s-min-val">40%</div></div>
+      <div class="row"><label>S MAX</label><input type="range" id="s-max" min="0" max="100" value="100" class="rs"><div class="val-box" id="s-max-val">100%</div></div>
+      <div class="row"><label>V MIN</label><input type="range" id="v-min" min="0" max="100" value="30" class="gs"><div class="val-box" id="v-min-val">30%</div></div>
+      <div class="row"><label>V MAX</label><input type="range" id="v-max" min="0" max="100" value="100" class="gs"><div class="val-box" id="v-max-val">100%</div></div>
+    </div>
 
-      <div id="color-swatch-row">
-        <div id="color-swatch"></div>
-        <button id="learn-btn">🎯 LEARN</button>
+    <!-- BPM GATE -->
+    <div class="module">
+      <div class="module-title">
+        <div class="dot" style="background:var(--yellow)"></div>BPM GATE
+        <div class="toggle on" data-key="bpmGate" style="margin-left:auto;" title="Enable/disable clock gate"></div>
       </div>
-
+      <div id="bpm-display">120 <span>BPM</span></div>
+      <button id="tap-btn">TAP TEMPO</button>
       <div class="row">
-        <label>HUE</label>
-        <input type="range" id="hue-center" min="0" max="359" value="120">
-        <div class="val-box" id="hue-center-val">120°</div>
+        <label>BPM</label>
+        <input type="range" id="bpm-slider" min="20" max="300" value="120" class="ys">
+        <div class="val-box" id="bpm-val" style="color:var(--yellow);">120</div>
       </div>
-      <div class="row">
-        <label>TOL±</label>
-        <input type="range" id="hue-tol" min="1" max="90" value="20">
-        <div class="val-box" id="hue-tol-val">±20</div>
+      <div style="color:var(--text-dim);font-size:9px;margin-bottom:6px;letter-spacing:.5px;">SUBDIVISION — gate pulses per beat</div>
+      <div class="subdiv-grid">
+        <div class="sdv" data-div="1">WHOLE</div>
+        <div class="sdv" data-div="2">HALF</div>
+        <div class="sdv active" data-div="4">QUARTER</div>
+        <div class="sdv" data-div="8">8TH</div>
+        <div class="sdv" data-div="16">16TH</div>
+        <div class="sdv" data-div="3">TRIPLET</div>
+        <div class="sdv" data-div="6">6-TRIP</div>
+        <div class="sdv" data-div="32">32ND</div>
       </div>
-      <div class="row">
-        <label>S MIN</label>
-        <input type="range" id="s-min" min="0" max="100" value="40" class="red-track">
-        <div class="val-box" id="s-min-val">40%</div>
-      </div>
-      <div class="row">
-        <label>S MAX</label>
-        <input type="range" id="s-max" min="0" max="100" value="100" class="red-track">
-        <div class="val-box" id="s-max-val">100%</div>
-      </div>
-      <div class="row">
-        <label>V MIN</label>
-        <input type="range" id="v-min" min="0" max="100" value="30" class="green-track">
-        <div class="val-box" id="v-min-val">30%</div>
-      </div>
-      <div class="row">
-        <label>V MAX</label>
-        <input type="range" id="v-max" min="0" max="100" value="100" class="green-track">
-        <div class="val-box" id="v-max-val">100%</div>
+      <div id="midi-clk-row">
+        <div id="midi-clk-dot"></div>
+        <div class="toggle-label" style="font-size:10px;">MIDI CLOCK SYNC</div>
+        <div class="toggle" data-key="midiClkSync"></div>
       </div>
     </div>
 
     <!-- MIDI SETUP -->
     <div class="module">
       <div class="module-title"><div class="dot" style="background:var(--green)"></div>MIDI SETUP</div>
-
       <div class="row">
         <label>CH</label>
         <select id="midi-ch" style="flex:1;">
@@ -403,759 +299,529 @@ input[type=range].green-track::-webkit-slider-thumb{background:var(--green);box-
           <option value="9">A</option><option value="10">A#</option><option value="11">B</option>
         </select>
       </div>
-      <div class="row">
-        <label>LOW</label>
-        <input type="range" id="note-min" min="0" max="127" value="36">
-        <div class="val-box" id="note-min-val">C2</div>
-      </div>
-      <div class="row">
-        <label>HIGH</label>
-        <input type="range" id="note-max" min="0" max="127" value="84">
-        <div class="val-box" id="note-max-val">C6</div>
-      </div>
-      <div class="row">
-        <label>GATE</label>
-        <input type="range" id="note-thresh" min="0" max="100" value="5">
-        <div class="val-box" id="note-thresh-val">5%</div>
-      </div>
-      <div class="row" style="font-size:9px;color:var(--text-dim);">
-        GATE = min blob size% to trigger note on
-      </div>
-      <div class="row" style="font-size:9px;color:var(--text-dim);margin-top:4px;">
-        Up to 4 blobs → Ch1, Ch2, Ch3, Ch4 automatically
-      </div>
+      <div class="row"><label>LOW</label><input type="range" id="note-min" min="0" max="127" value="36"><div class="val-box" id="note-min-val">C2</div></div>
+      <div class="row"><label>HIGH</label><input type="range" id="note-max" min="0" max="127" value="84"><div class="val-box" id="note-max-val">C6</div></div>
+      <div class="row"><label>GATE</label><input type="range" id="note-thresh" min="0" max="100" value="5"><div class="val-box" id="note-thresh-val">5%</div></div>
+      <div class="row" style="font-size:9px;color:var(--text-dim);">Blobs 1–4 fire on Ch+0, Ch+1, Ch+2, Ch+3</div>
     </div>
 
     <!-- CC ROUTING -->
     <div class="module">
       <div class="module-title"><div class="dot" style="background:var(--yellow)"></div>CC ROUTING</div>
-      <div style="color:var(--text-dim);font-size:9px;margin-bottom:8px;">Toggle each mapping on/off</div>
-
-      <div class="cc-row">
-        <div class="toggle on" id="cc-x-toggle" data-key="ccX"></div>
-        <div class="toggle-label">X POSITION</div>
-        <select id="cc-x-num" style="font-size:10px;padding:2px 4px;width:56px;">
-          <option value="1">CC1</option><option value="11">CC11</option>
-          <option value="74">CC74</option><option value="73">CC73</option>
-          <option value="71">CC71</option><option value="7">CC7</option><option value="10">CC10</option>
-          <option value="64">CC64</option>
-        </select>
-      </div>
-      <div class="cc-row">
-        <div class="toggle on" id="cc-y-toggle" data-key="ccY"></div>
-        <div class="toggle-label">Y POSITION</div>
-        <select id="cc-y-num" style="font-size:10px;padding:2px 4px;width:56px;">
-          <option value="11">CC11</option><option value="1">CC1</option>
-          <option value="74">CC74</option><option value="73">CC73</option>
-          <option value="71">CC71</option><option value="7">CC7</option><option value="10">CC10</option>
-        </select>
-      </div>
-      <div class="cc-row">
-        <div class="toggle on" id="cc-sat-toggle" data-key="ccSat"></div>
-        <div class="toggle-label">SATURATION</div>
-        <select id="cc-sat-num" style="font-size:10px;padding:2px 4px;width:56px;">
-          <option value="74">CC74</option><option value="1">CC1</option>
-          <option value="11">CC11</option><option value="71">CC71</option>
-          <option value="73">CC73</option><option value="7">CC7</option>
-        </select>
-      </div>
-      <div class="cc-row">
-        <div class="toggle on" id="cc-val-toggle" data-key="ccVal"></div>
-        <div class="toggle-label">BRIGHTNESS</div>
-        <select id="cc-val-num" style="font-size:10px;padding:2px 4px;width:56px;">
-          <option value="7">CC7</option><option value="11">CC11</option>
-          <option value="1">CC1</option><option value="74">CC74</option>
-          <option value="73">CC73</option><option value="71">CC71</option>
-        </select>
-      </div>
-      <div class="cc-row">
-        <div class="toggle" id="cc-area-toggle" data-key="ccArea"></div>
-        <div class="toggle-label">BLOB AREA</div>
-        <select id="cc-area-num" style="font-size:10px;padding:2px 4px;width:56px;">
-          <option value="7">CC7</option><option value="11">CC11</option>
-          <option value="1">CC1</option><option value="74">CC74</option>
-        </select>
-      </div>
-      <div class="cc-row" style="margin-top:8px;">
-        <div class="toggle" id="pb-toggle" data-key="pitchBend"></div>
-        <div class="toggle-label">PITCH BEND (hue offset)</div>
-      </div>
-      <div class="cc-row">
-        <div class="toggle" id="vel-sat-toggle" data-key="velFromSat"></div>
-        <div class="toggle-label">VELOCITY = SATURATION</div>
-      </div>
+      <div class="cc-row"><div class="toggle on" data-key="ccX"></div><div class="toggle-label">X POSITION</div><select id="cc-x-num"><option value="1">CC1</option><option value="11">CC11</option><option value="74">CC74</option><option value="73">CC73</option><option value="7">CC7</option><option value="10">CC10</option></select></div>
+      <div class="cc-row"><div class="toggle on" data-key="ccY"></div><div class="toggle-label">Y POSITION</div><select id="cc-y-num"><option value="11">CC11</option><option value="1">CC1</option><option value="74">CC74</option><option value="73">CC73</option><option value="7">CC7</option></select></div>
+      <div class="cc-row"><div class="toggle on" data-key="ccSat"></div><div class="toggle-label">SATURATION</div><select id="cc-sat-num"><option value="74">CC74</option><option value="1">CC1</option><option value="11">CC11</option><option value="71">CC71</option></select></div>
+      <div class="cc-row"><div class="toggle on" data-key="ccVal"></div><div class="toggle-label">BRIGHTNESS</div><select id="cc-val-num"><option value="7">CC7</option><option value="11">CC11</option><option value="1">CC1</option><option value="74">CC74</option></select></div>
+      <div class="cc-row"><div class="toggle" data-key="ccArea"></div><div class="toggle-label">BLOB AREA</div><select id="cc-area-num"><option value="7">CC7</option><option value="11">CC11</option><option value="1">CC1</option></select></div>
+      <div class="cc-row" style="margin-top:6px;"><div class="toggle" data-key="pitchBend"></div><div class="toggle-label">PITCH BEND (hue offset)</div></div>
+      <div class="cc-row"><div class="toggle" data-key="velFromSat"></div><div class="toggle-label">VELOCITY = SATURATION</div></div>
     </div>
 
-    <!-- ACTIVITY LOG -->
+    <!-- MIDI ACTIVITY -->
     <div class="module">
       <div class="module-title"><div class="dot" style="background:var(--red)"></div>MIDI ACTIVITY</div>
       <div id="activity-log"></div>
-      <div class="row" style="margin-top:8px;">
-        <button class="btn" id="clear-log-btn">CLEAR LOG</button>
-      </div>
+      <div class="row" style="margin-top:8px;"><button class="btn" id="clear-log-btn">CLEAR LOG</button></div>
     </div>
 
-    <!-- HELP -->
     <button id="help-toggle">HOW TO USE <span>▼</span></button>
     <div id="help-content">
-      <h4>1. Start Camera</h4>
-      <p>Click <code>▶ START CAMERA</code> and allow camera access.</p>
-      <h4>2. Pick a Color</h4>
-      <p>Click <code>🎯 LEARN</code>, then click directly on a color in the video feed to auto-tune the detection. Or dial in <code>HUE / TOL± / S / V</code> manually.</p>
-      <h4>3. Connect MIDI</h4>
-      <p>Open a DAW or enable a virtual MIDI port first, then select it in the header dropdown.</p>
-      <h4>4. Play!</h4>
-      <p>CHROMIDI tracks up to 4 separate color blobs simultaneously. Each blob fires on a different MIDI channel (Ch1–Ch4). X position of each blob maps to a scale note. Saturation, brightness, and position control CCs from the primary blob.</p>
-      <h4>Tips</h4>
-      <p>Use bright, saturated objects — coloured tape on your hands works great. Increase <code>TOL±</code> if detection is patchy. Lower <code>GATE</code> to detect small objects. Mirror mode is useful for live performance so movement feels natural.</p>
+      <h4>Input Source</h4>
+      <p><strong>CAMERA</strong> uses your webcam. <strong>FILE</strong> lets you drop any video file. Use the speed selector (⅛× to 4×) to control playback rate — slowing down directly reduces how often notes trigger.</p>
+      <h4>Color Detection</h4>
+      <p>Set <code>HUE</code> to your target color, <code>TOL±</code> for how wide a range to catch, and <code>S/V</code> to filter out washed-out or dark areas. Up to 4 separate blobs tracked at once.</p>
+      <h4>BPM Gate</h4>
+      <p>When ON, note changes can only fire on each clock pulse. <code>TAP TEMPO</code> sets BPM by tapping. Subdivision controls pulse rate — WHOLE=slowest (1 tick/bar), 32ND=fastest. Enable <code>MIDI CLOCK SYNC</code> to lock to your DAW's transport.</p>
+      <h4>Multi-blob MIDI</h4>
+      <p>Each blob fires on a separate MIDI channel (base Ch + 0/1/2/3). X position maps to a scale note. CCs come from the primary (largest) blob.</p>
     </div>
 
-  </div><!-- /right-panel -->
-</div><!-- /main -->
+  </div>
+</div>
 
 <script>
 // ═══════════════════════════════════════════════════════════════
-//  CHROMIDI — HSV Color Analysis → MIDI
-//  Pure JS (no OpenCV.js needed), WebMIDI, single-file
+//  CHROMIDI v2 — HSV→MIDI · multi-blob · BPM gate · file input
 // ═══════════════════════════════════════════════════════════════
 
-// ── SCALES ──────────────────────────────────────────────────────
 const SCALES = {
-  'Chromatic':      [0,1,2,3,4,5,6,7,8,9,10,11],
-  'Major':          [0,2,4,5,7,9,11],
-  'Minor':          [0,2,3,5,7,8,10],
-  'Pentatonic Maj': [0,2,4,7,9],
-  'Pentatonic Min': [0,3,5,7,10],
-  'Dorian':         [0,2,3,5,7,9,10],
-  'Mixolydian':     [0,2,4,5,7,9,10],
-  'Blues':          [0,3,5,6,7,10],
+  'Chromatic':[0,1,2,3,4,5,6,7,8,9,10,11],'Major':[0,2,4,5,7,9,11],
+  'Minor':[0,2,3,5,7,8,10],'Pentatonic Maj':[0,2,4,7,9],
+  'Pentatonic Min':[0,3,5,7,10],'Dorian':[0,2,3,5,7,9,10],
+  'Mixolydian':[0,2,4,5,7,9,10],'Blues':[0,3,5,6,7,10],
 };
-const NOTE_NAMES = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+const NOTE_NAMES=['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+function midiToName(n){return NOTE_NAMES[n%12]+(Math.floor(n/12)-1);}
 
-function midiToName(n) {
-  return NOTE_NAMES[n % 12] + (Math.floor(n / 12) - 1);
+function getScaleNote(pos,root,scale,lo,hi){
+  const iv=SCALES[scale]||SCALES['Chromatic'],notes=[];
+  for(let m=0;m<=127;m++){const s=((m-root)%12+12)%12;if(iv.includes(s)&&m>=lo&&m<=hi)notes.push(m);}
+  if(!notes.length)return Math.round(lo+pos*(hi-lo));
+  return notes[Math.min(Math.floor(pos*notes.length),notes.length-1)];
 }
 
-function getScaleNote(position, root, scaleName, noteMin, noteMax) {
-  const intervals = SCALES[scaleName] || SCALES['Chromatic'];
-  const notes = [];
-  for (let m = 0; m <= 127; m++) {
-    const semi = ((m - root) % 12 + 12) % 12;
-    if (intervals.includes(semi) && m >= noteMin && m <= noteMax) notes.push(m);
+function rgbToHsv(r,g,b){
+  r/=255;g/=255;b/=255;
+  const mx=Math.max(r,g,b),mn=Math.min(r,g,b),d=mx-mn;
+  let h=0;
+  if(d){
+    if(mx===r)h=((g-b)/d+(g<b?6:0))/6;
+    else if(mx===g)h=((b-r)/d+2)/6;
+    else h=((r-g)/d+4)/6;
   }
-  if (!notes.length) return Math.round(noteMin + position * (noteMax - noteMin));
-  const idx = Math.min(Math.floor(position * notes.length), notes.length - 1);
-  return notes[idx];
+  return[h*360,mx===0?0:d/mx*100,mx*100];
 }
-
-// ── COLOR MATH ──────────────────────────────────────────────────
-function rgbToHsv(r, g, b) {
-  r /= 255; g /= 255; b /= 255;
-  const max = Math.max(r, g, b), min = Math.min(r, g, b), d = max - min;
-  let h = 0;
-  if (d !== 0) {
-    switch (max) {
-      case r: h = ((g - b) / d + (g < b ? 6 : 0)) / 6; break;
-      case g: h = ((b - r) / d + 2) / 6; break;
-      case b: h = ((r - g) / d + 4) / 6; break;
-    }
-  }
-  return [h * 360, max === 0 ? 0 : d / max * 100, max * 100];
-}
-
-function hsvToRgbStr(h, s, v) {
-  h = h % 360; s /= 100; v /= 100;
-  const c = v * s, x = c * (1 - Math.abs((h / 60) % 2 - 1)), m = v - c;
+function hsvToRgbStr(h,s,v){
+  h=(h%360+360)%360;s/=100;v/=100;
+  const c=v*s,x=c*(1-Math.abs((h/60)%2-1)),m=v-c;
   let r=0,g=0,b=0;
   if(h<60){r=c;g=x;}else if(h<120){r=x;g=c;}else if(h<180){g=c;b=x;}
   else if(h<240){g=x;b=c;}else if(h<300){r=x;b=c;}else{r=c;b=x;}
-  return `rgb(${Math.round((r+m)*255)},${Math.round((g+m)*255)},${Math.round((b+m)*255)})`;
+  return`rgb(${Math.round((r+m)*255)},${Math.round((g+m)*255)},${Math.round((b+m)*255)})`;
 }
+function hueInRange(h,c,t){let d=Math.abs(h-c);if(d>180)d=360-d;return d<=t;}
 
-function hueInRange(h, center, tol) {
-  let diff = Math.abs(h - center);
-  if (diff > 180) diff = 360 - diff;
-  return diff <= tol;
-}
+// ── BLOB DETECTION (BFS on downsampled mask) ────────────────────
+const PROC_W=320,PROC_H=240,DS=6;
+const DSW=Math.ceil(PROC_W/DS),DSH=Math.ceil(PROC_H/DS);
+const dsMask=new Uint8Array(DSW*DSH),dsLabels=new Int16Array(DSW*DSH),bfsQ=new Int32Array(DSW*DSH);
+const binMask=new Uint8Array(PROC_W*PROC_H),ovData=new Uint8ClampedArray(PROC_W*PROC_H*4);
+const MAX_BLOBS=4;
+const BLOB_COLORS=['#00d4ff','#ff2060','#40ff80','#ffd030'];
 
-// ── STATE ───────────────────────────────────────────────────────
-let midiAccess = null;
-let midiOutput = null;
-let isRunning = false;
-let learningMode = false;
-let isMirrored = false;
-let lastCCVals = {};
-let smoothedVals = { x: 0, y: 0, sat: 0, val: 0, area: 0, hue: 180 };
-
-// Multi-blob note tracking — up to 4 simultaneous blobs
-const MAX_BLOBS = 4;
-const BLOB_COLORS = ['#00d4ff','#ff2060','#40ff80','#ffd030']; // per-blob display colors
-// Per-blob note state
-const blobNoteState = Array.from({length: MAX_BLOBS}, () => ({
-  note: null, active: false, smoothX: 64, smoothY: 64
-}));
-
-const toggleStates = {
-  ccX: true, ccY: true, ccSat: true, ccVal: true,
-  ccArea: false, pitchBend: false, velFromSat: false
-};
-
-// ── CONNECTED COMPONENTS (BFS on downsampled mask) ───────────────
-const DS = 6; // downsample factor (1 proc pixel = 1/DS grid cell)
-const DSW = Math.ceil(320 / DS);  // ~54
-const DSH = Math.ceil(240 / DS);  // 40
-const dsMask   = new Uint8Array(DSW * DSH);
-const dsLabels = new Int16Array(DSW * DSH);
-const bfsQueue = new Int32Array(DSW * DSH);
-
-function findBlobs(mask, procW, procH, minBlobPx) {
-  // 1. Build downsampled occupancy grid
+function findBlobs(minPx){
   dsMask.fill(0);
-  for (let y = 0; y < procH; y++) {
-    for (let x = 0; x < procW; x++) {
-      if (mask[y * procW + x]) {
-        const dy = Math.floor(y / DS), dx = Math.floor(x / DS);
-        dsMask[dy * DSW + dx]++;
-      }
-    }
-  }
-  // 2. Threshold: cell must have ≥ threshold hits (noise filter)
-  const CELL_THRESH = Math.ceil(DS * DS * 0.25); // 25% of cell pixels
-  for (let i = 0; i < DSW * DSH; i++) {
-    dsMask[i] = dsMask[i] >= CELL_THRESH ? 1 : 0;
-  }
-  // 3. BFS labeling
+  for(let y=0;y<PROC_H;y++)for(let x=0;x<PROC_W;x++)
+    if(binMask[y*PROC_W+x])dsMask[Math.floor(y/DS)*DSW+Math.floor(x/DS)]++;
+  const ct=Math.ceil(DS*DS*0.25);
+  for(let i=0;i<DSW*DSH;i++)dsMask[i]=dsMask[i]>=ct?1:0;
   dsLabels.fill(0);
-  let numLabels = 0;
-  const rawBlobs = [];
-
-  for (let start = 0; start < DSW * DSH; start++) {
-    if (!dsMask[start] || dsLabels[start]) continue;
-    numLabels++;
-    dsLabels[start] = numLabels;
-    let head = 0, tail = 0;
-    bfsQueue[tail++] = start;
-    let cellCount = 0;
-
-    while (head < tail) {
-      const cur = bfsQueue[head++];
-      cellCount++;
-      const cx = cur % DSW, cy = Math.floor(cur / DSW);
-      // 4-connected neighbors
-      if (cx > 0)       { const n=cur-1;    if(dsMask[n]&&!dsLabels[n]){dsLabels[n]=numLabels;bfsQueue[tail++]=n;} }
-      if (cx < DSW-1)   { const n=cur+1;    if(dsMask[n]&&!dsLabels[n]){dsLabels[n]=numLabels;bfsQueue[tail++]=n;} }
-      if (cy > 0)       { const n=cur-DSW;  if(dsMask[n]&&!dsLabels[n]){dsLabels[n]=numLabels;bfsQueue[tail++]=n;} }
-      if (cy < DSH-1)   { const n=cur+DSW;  if(dsMask[n]&&!dsLabels[n]){dsLabels[n]=numLabels;bfsQueue[tail++]=n;} }
+  const raw=[];let nl=0;
+  for(let s=0;s<DSW*DSH;s++){
+    if(!dsMask[s]||dsLabels[s])continue;
+    nl++;dsLabels[s]=nl;let hd=0,tl=0,cl=0;bfsQ[tl++]=s;
+    while(hd<tl){
+      const c=bfsQ[hd++];cl++;
+      const cx=c%DSW,cy=Math.floor(c/DSW);
+      if(cx>0){const n=c-1;if(dsMask[n]&&!dsLabels[n]){dsLabels[n]=nl;bfsQ[tl++]=n;}}
+      if(cx<DSW-1){const n=c+1;if(dsMask[n]&&!dsLabels[n]){dsLabels[n]=nl;bfsQ[tl++]=n;}}
+      if(cy>0){const n=c-DSW;if(dsMask[n]&&!dsLabels[n]){dsLabels[n]=nl;bfsQ[tl++]=n;}}
+      if(cy<DSH-1){const n=c+DSW;if(dsMask[n]&&!dsLabels[n]){dsLabels[n]=nl;bfsQ[tl++]=n;}}
     }
-    rawBlobs.push({ label: numLabels, cellCount });
+    raw.push({label:nl,cells:cl});
   }
-
-  if (!rawBlobs.length) return [];
-
-  // 4. Compute per-blob centroid and HSV stats from original full-res mask pixels
-  //    Only keep blobs above minBlobPx
-  const minCells = Math.ceil(minBlobPx / (DS * DS));
-  const validBlobs = rawBlobs.filter(b => b.cellCount >= minCells);
-  if (!validBlobs.length) return [];
-
-  // Sort by size, take top MAX_BLOBS
-  validBlobs.sort((a,b) => b.cellCount - a.cellCount);
-  const topBlobs = validBlobs.slice(0, MAX_BLOBS);
-
-  // Build label → blob index map
-  const labelToIdx = new Map();
-  topBlobs.forEach((b,i) => labelToIdx.set(b.label, i));
-
-  // Accumulate centroid from downsample grid
-  const stats = topBlobs.map(() => ({ sumCX:0, sumCY:0, count:0 }));
-  for (let i = 0; i < DSW * DSH; i++) {
-    const lbl = dsLabels[i];
-    if (!lbl || !labelToIdx.has(lbl)) continue;
-    const idx = labelToIdx.get(lbl);
-    stats[idx].sumCX += (i % DSW) * DS + DS/2;
-    stats[idx].sumCY += Math.floor(i / DSW) * DS + DS/2;
-    stats[idx].count++;
+  const mc=Math.ceil(minPx/(DS*DS));
+  const top=raw.filter(b=>b.cells>=mc).sort((a,b)=>b.cells-a.cells).slice(0,MAX_BLOBS);
+  if(!top.length)return[];
+  const lm=new Map(top.map((b,i)=>[b.label,i]));
+  const st=top.map(()=>({sx:0,sy:0,n:0}));
+  for(let i=0;i<DSW*DSH;i++){
+    const l=dsLabels[i];if(!l||!lm.has(l))continue;
+    const idx=lm.get(l);
+    st[idx].sx+=(i%DSW)*DS+DS/2;st[idx].sy+=Math.floor(i/DSW)*DS+DS/2;st[idx].n++;
   }
-
-  return topBlobs.map((b, i) => ({
-    cx: stats[i].count ? stats[i].sumCX / stats[i].count / procW : 0.5,
-    cy: stats[i].count ? stats[i].sumCY / stats[i].count / procH : 0.5,
-    areaPx: b.cellCount * DS * DS,
-    areaFrac: b.cellCount * DS * DS / (procW * procH),
+  return top.map((b,i)=>({
+    cx:st[i].n?st[i].sx/st[i].n/PROC_W:0.5,
+    cy:st[i].n?st[i].sy/st[i].n/PROC_H:0.5,
+    areaFrac:b.cells*DS*DS/(PROC_W*PROC_H),
   }));
 }
 
-// Processing canvas (smaller for perf)
-const PROC_W = 320, PROC_H = 240;
-const procCanvas = document.createElement('canvas');
-procCanvas.width = PROC_W; procCanvas.height = PROC_H;
-const procCtx = procCanvas.getContext('2d', { willReadFrequently: true });
+// ── STATE ────────────────────────────────────────────────────────
+let midiAccess=null,midiOutput=null;
+let isRunning=false,isMirrored=false,inputMode='camera';
+let lastCCVals={};
+const sm={x:64,y:64,sat:64,val:64,area:0};
+const blobSt=Array.from({length:MAX_BLOBS},()=>({note:null,active:false,smX:64,smY:64}));
 
-// ── DOM REFS ────────────────────────────────────────────────────
-const video = document.getElementById('video');
-const displayCanvas = document.getElementById('display-canvas');
-const dCtx = displayCanvas.getContext('2d');
-const hueSpecCanvas = document.getElementById('hue-spectrum');
-const learnOverlay = document.getElementById('learn-overlay');
-const learnBtn = document.getElementById('learn-btn');
-const colorSwatch = document.getElementById('color-swatch');
-const midiOutputSelect = document.getElementById('midi-output-select');
-const midiStatusDot = document.getElementById('midi-status-dot');
-const midiLabel = document.getElementById('midi-label');
+const T={bpmGate:true,midiClkSync:false,ccX:true,ccY:true,ccSat:true,ccVal:true,ccArea:false,pitchBend:false,velFromSat:false};
 
-// ── MIDI SETUP ──────────────────────────────────────────────────
-function initMIDI() {
-  if (!navigator.requestMIDIAccess) {
-    midiLabel.textContent = 'MIDI NOT SUPPORTED (USE CHROME)';
-    midiStatusDot.className = 'err';
-    return;
+// BPM gate
+let bpm=120,subdivision=4,lastTickTime=0,gateOpen=true;
+const tapTimes=[];
+let midiClkCount=0,midiClkLastBeat=0,midiClkBpm=120;
+
+function tickIntervalMs(){return(60000/bpm)*(4/subdivision);}
+
+function advanceClock(now){
+  if(!T.bpmGate){gateOpen=true;return;}
+  if(now-lastTickTime>=tickIntervalMs()){
+    lastTickTime=now;gateOpen=true;
+    const fl=document.getElementById('clock-flash');
+    fl.classList.remove('fadeout');fl.classList.add('beat');
+    requestAnimationFrame(()=>requestAnimationFrame(()=>{fl.classList.remove('beat');fl.classList.add('fadeout');}));
+    document.getElementById('stat-clock').textContent=Math.round(bpm)+'BPM/'+sdLabel(subdivision);
   }
-  navigator.requestMIDIAccess({ sysex: false }).then(access => {
-    midiAccess = access;
-    midiStatusDot.className = 'ok';
-    midiLabel.textContent = 'MIDI READY';
-    populateMidiOutputs();
-    access.onstatechange = () => populateMidiOutputs();
-  }).catch(err => {
-    midiStatusDot.className = 'err';
-    midiLabel.textContent = 'MIDI BLOCKED';
-    console.warn('MIDI error:', err);
-  });
 }
+function sdLabel(d){return{1:'W',2:'H',4:'Q',8:'8',16:'16',32:'32',3:'T3',6:'T6'}[d]||d;}
 
-function populateMidiOutputs() {
-  const sel = midiOutputSelect;
-  const prevVal = sel.value;
-  while (sel.options.length > 1) sel.remove(1);
-  if (!midiAccess) return;
-  for (const out of midiAccess.outputs.values()) {
-    const opt = document.createElement('option');
-    opt.value = out.id; opt.textContent = out.name;
-    sel.appendChild(opt);
+// ── PROC CANVAS ───────────────────────────────────────────────────
+const procCv=document.createElement('canvas');procCv.width=PROC_W;procCv.height=PROC_H;
+const procCtx=procCv.getContext('2d',{willReadFrequently:true});
+
+// ── DOM ───────────────────────────────────────────────────────────
+const video=document.getElementById('video');
+const dc=document.getElementById('display-canvas');
+const dCtx=dc.getContext('2d');
+const hueSpec=document.getElementById('hue-spectrum');
+const midiSel=document.getElementById('midi-output-select');
+const midiDot=document.getElementById('midi-status-dot');
+const midiLbl=document.getElementById('midi-label');
+
+// ── MIDI ──────────────────────────────────────────────────────────
+function initMIDI(){
+  if(!navigator.requestMIDIAccess){midiDot.className='err';midiLbl.textContent='NOT SUPPORTED (CHROME ONLY)';return;}
+  navigator.requestMIDIAccess({sysex:false}).then(acc=>{
+    midiAccess=acc;midiDot.className='ok';midiLbl.textContent='MIDI READY';
+    populateOutputs();
+    for(const inp of acc.inputs.values())inp.onmidimessage=onMidiMsg;
+    acc.onstatechange=e=>{
+      populateOutputs();
+      if(e.port.type==='input'&&e.port.state==='connected')e.port.onmidimessage=onMidiMsg;
+    };
+  }).catch(()=>{midiDot.className='err';midiLbl.textContent='MIDI BLOCKED';});
+}
+function onMidiMsg(e){
+  if(e.data[0]!==0xF8)return; // only MIDI clock
+  const now=performance.now();
+  midiClkCount=(midiClkCount+1)%24;
+  if(midiClkCount===0){
+    if(midiClkLastBeat)midiClkBpm=Math.round(60000/(now-midiClkLastBeat));
+    midiClkLastBeat=now;
+    if(T.midiClkSync){bpm=midiClkBpm;syncBpmUI();}
   }
-  if (prevVal) sel.value = prevVal;
-  updateMidiOutput();
-}
-
-function updateMidiOutput() {
-  if (!midiAccess) return;
-  const id = midiOutputSelect.value;
-  midiOutput = id ? midiAccess.outputs.get(id) : null;
-  midiLabel.textContent = midiOutput ? midiOutput.name : 'NO OUTPUT SEL.';
-}
-
-// ── MIDI SEND ───────────────────────────────────────────────────
-function getChannel() { return parseInt(document.getElementById('midi-ch').value) || 0; }
-
-function sendNoteOn(note, vel) { sendNoteOnCh(note, vel, getChannel()); }
-function sendNoteOff(note)     { sendNoteOffCh(note, getChannel()); }
-
-function sendNoteOnCh(note, vel, ch) {
-  if (!midiOutput) return;
-  vel = Math.max(1, Math.min(127, vel));
-  midiOutput.send([0x90 | (ch & 0xF), note, vel]);
-  midiStatusDot.className = 'active';
-  setTimeout(() => { if(midiStatusDot.className==='active') midiStatusDot.className = 'ok'; }, 80);
-  addLog('noteon', `CH${ch+1} NOTE ON ${midiToName(note)} v:${vel}`);
-}
-
-function sendNoteOffCh(note, ch) {
-  if (!midiOutput) return;
-  midiOutput.send([0x80 | (ch & 0xF), note, 0]);
-  addLog('noteoff', `CH${ch+1} NOTE OFF ${midiToName(note)}`);
-}
-
-function sendCC(ccNum, val) {
-  if (!midiOutput) return;
-  val = Math.max(0, Math.min(127, Math.round(val)));
-  if (lastCCVals[ccNum] === val) return;
-  lastCCVals[ccNum] = val;
-  const ch = getChannel();
-  midiOutput.send([0xB0 | ch, ccNum, val]);
-  addLog('cc', `CC${ccNum} → ${val}`);
-}
-
-function sendPitchBend(val14bit) {
-  if (!midiOutput) return;
-  const ch = getChannel();
-  const lsb = val14bit & 0x7F;
-  const msb = (val14bit >> 7) & 0x7F;
-  midiOutput.send([0xE0 | ch, lsb, msb]);
-}
-
-function allNotesOff() {
-  if (!midiOutput) return;
-  for (let ch = 0; ch < 16; ch++) {
-    midiOutput.send([0xB0 | ch, 123, 0]);
+  // Gate pulse based on subdivision vs 24ppqn
+  if(!T.midiClkSync)return;
+  const pulsePer=Math.max(1,Math.round(24/(subdivision/4)));
+  if(midiClkCount%pulsePer===0){
+    gateOpen=true;lastTickTime=now;
+    const d=document.getElementById('midi-clk-dot');
+    d.classList.add('on');setTimeout(()=>d.classList.remove('on'),60);
   }
-  blobNoteState.forEach(s => { s.note = null; s.active = false; });
-  addLog('cc', 'ALL NOTES OFF');
+}
+function populateOutputs(){
+  const prev=midiSel.value;
+  while(midiSel.options.length>1)midiSel.remove(1);
+  if(!midiAccess)return;
+  for(const o of midiAccess.outputs.values()){const opt=document.createElement('option');opt.value=o.id;opt.textContent=o.name;midiSel.appendChild(opt);}
+  midiSel.value=prev;updateOutput();
+}
+function updateOutput(){
+  if(!midiAccess)return;
+  midiOutput=midiSel.value?midiAccess.outputs.get(midiSel.value):null;
+  midiLbl.textContent=midiOutput?midiOutput.name:'NO OUTPUT SEL.';
+}
+const gCh=()=>parseInt(document.getElementById('midi-ch').value)||0;
+function noteOnCh(note,vel,ch){
+  if(!midiOutput)return;vel=Math.max(1,Math.min(127,vel));
+  midiOutput.send([0x90|(ch&15),note,vel]);
+  midiDot.className='active';setTimeout(()=>{if(midiDot.className==='active')midiDot.className='ok';},80);
+  log('noteon',`CH${ch+1} ON ${midiToName(note)} v:${vel}`);
+}
+function noteOffCh(note,ch){
+  if(!midiOutput)return;midiOutput.send([0x80|(ch&15),note,0]);
+  log('noteoff',`CH${ch+1} OFF ${midiToName(note)}`);
+}
+function sendCC(cc,val){
+  if(!midiOutput)return;val=Math.max(0,Math.min(127,Math.round(val)));
+  if(lastCCVals[cc]===val)return;lastCCVals[cc]=val;
+  midiOutput.send([0xB0|gCh(),cc,val]);log('cc',`CC${cc}→${val}`);
+}
+function sendPB(v14){if(!midiOutput)return;midiOutput.send([0xE0|gCh(),v14&127,(v14>>7)&127]);}
+function allNotesOff(){
+  if(!midiOutput)return;
+  for(let c=0;c<16;c++)midiOutput.send([0xB0|c,123,0]);
+  blobSt.forEach(s=>{s.note=null;s.active=false;});log('cc','ALL NOTES OFF');
 }
 
-// ── ACTIVITY LOG ────────────────────────────────────────────────
-const activityLog = document.getElementById('activity-log');
-let logEntries = [];
-function addLog(type, msg) {
-  const entry = { type, msg };
-  logEntries.unshift(entry);
-  if (logEntries.length > 30) logEntries.pop();
-  renderLog();
-}
-function renderLog() {
-  activityLog.innerHTML = logEntries.slice(0, 12).map(e =>
-    `<div class="log-entry"><span class="log-type ${e.type}">${e.type.toUpperCase()}</span><span>${e.msg}</span></div>`
-  ).join('');
+// ── LOG ───────────────────────────────────────────────────────────
+const logEl=document.getElementById('activity-log');let logArr=[];
+function log(type,msg){
+  logArr.unshift({type,msg});if(logArr.length>30)logArr.pop();
+  logEl.innerHTML=logArr.slice(0,14).map(e=>`<div class="log-entry"><span class="ltype ${e.type}">${e.type.toUpperCase()}</span><span>${e.msg}</span></div>`).join('');
 }
 
-// ── CAMERA ──────────────────────────────────────────────────────
-async function startCamera() {
-  const resStr = document.getElementById('resolution-select').value;
-  const [w, h] = resStr.split('x').map(Number);
-  try {
-    const stream = await navigator.mediaDevices.getUserMedia({
-      video: { width: { ideal: w }, height: { ideal: h }, facingMode: 'user' }
-    });
-    video.srcObject = stream;
-    await video.play();
-    document.getElementById('no-cam').style.display = 'none';
-    isRunning = true;
-    requestAnimationFrame(mainLoop);
-    document.getElementById('start-cam-btn').textContent = '⏹ STOP CAMERA';
+// ── CAMERA ────────────────────────────────────────────────────────
+async function startCamera(){
+  const[w,h]=document.getElementById('resolution-select').value.split('x').map(Number);
+  try{
+    const stream=await navigator.mediaDevices.getUserMedia({video:{width:{ideal:w},height:{ideal:h}}});
+    video.srcObject=stream;await video.play();
+    document.getElementById('no-cam').style.display='none';
+    isRunning=true;requestAnimationFrame(mainLoop);
+    document.getElementById('start-cam-btn').textContent='⏹ STOP';
     document.getElementById('start-cam-btn').classList.add('active');
-  } catch(e) {
-    alert('Camera access denied or unavailable: ' + e.message);
-  }
+  }catch(e){alert('Camera error: '+e.message);}
 }
-
-function stopCamera() {
-  if (video.srcObject) { video.srcObject.getTracks().forEach(t => t.stop()); video.srcObject = null; }
-  isRunning = false;
-  document.getElementById('start-cam-btn').textContent = '▶ START CAMERA';
+function stopCamera(){
+  if(video.srcObject){video.srcObject.getTracks().forEach(t=>t.stop());video.srcObject=null;}
+  isRunning=false;
+  document.getElementById('start-cam-btn').textContent='▶ START';
   document.getElementById('start-cam-btn').classList.remove('active');
-  document.getElementById('no-cam').style.display = 'flex';
+  document.getElementById('no-cam').style.display='flex';
   allNotesOff();
 }
 
-// ── MAIN PROCESSING LOOP ─────────────────────────────────────────
-function smooth(prev, next, f = 0.25) { return prev + (next - prev) * f; }
+// ── FILE INPUT ────────────────────────────────────────────────────
+function loadFile(file){
+  if(!file||!file.type.startsWith('video/'))return;
+  const url=URL.createObjectURL(file);
+  if(video.src)URL.revokeObjectURL(video.src);
+  video.src=url;video.loop=false;
+  video.playbackRate=parseFloat(document.getElementById('speed-select').value);
+  video.load();
+  video.addEventListener('loadedmetadata',()=>{
+    document.getElementById('no-cam').style.display='none';
+    document.getElementById('file-playback').classList.add('open');
+    document.getElementById('playback-bar').classList.add('visible');
+    document.getElementById('scrubber').max=video.duration;
+    document.getElementById('file-drop').innerHTML=`<div style="color:var(--green)">✓ ${file.name}</div>`;
+    isRunning=true;requestAnimationFrame(mainLoop);
+  },{once:true});
+}
+function unloadFile(){
+  isRunning=false;video.pause();
+  if(video.src){URL.revokeObjectURL(video.src);video.src='';}
+  document.getElementById('no-cam').style.display='flex';
+  document.getElementById('file-playback').classList.remove('open');
+  document.getElementById('playback-bar').classList.remove('visible');
+  document.getElementById('file-drop').innerHTML='<div>DROP VIDEO FILE HERE</div><div style="margin-top:4px;font-size:9px;">or click to browse · mp4 mov webm</div>';
+  allNotesOff();
+}
 
-// Reusable typed arrays for per-frame processing
-const binaryMask = new Uint8Array(PROC_W * PROC_H);
-const overlayData = new Uint8ClampedArray(PROC_W * PROC_H * 4);
+// ── MAIN LOOP ─────────────────────────────────────────────────────
+const smo=(p,n,f=0.2)=>p+(n-p)*f;
 
-function mainLoop() {
-  if (!isRunning) return;
+function mainLoop(){
+  if(!isRunning)return;
   requestAnimationFrame(mainLoop);
-  if (video.readyState < 2) return;
+  if(video.readyState<2)return;
+  if(inputMode==='file'&&video.paused&&!video.ended)return;
 
-  // ── DRAW VIDEO TO PROCESSING CANVAS ──
+  const now=performance.now();
+  if(T.bpmGate&&!T.midiClkSync)advanceClock(now);
+  if(!T.bpmGate){gateOpen=true;}
+
   procCtx.save();
-  if (isMirrored) { procCtx.translate(PROC_W, 0); procCtx.scale(-1, 1); }
-  procCtx.drawImage(video, 0, 0, PROC_W, PROC_H);
+  if(isMirrored){procCtx.translate(PROC_W,0);procCtx.scale(-1,1);}
+  procCtx.drawImage(video,0,0,PROC_W,PROC_H);
   procCtx.restore();
+  const px=procCtx.getImageData(0,0,PROC_W,PROC_H).data;
 
-  const imageData = procCtx.getImageData(0, 0, PROC_W, PROC_H);
-  const pixels = imageData.data;
+  const hC=+document.getElementById('hue-center').value;
+  const hT=+document.getElementById('hue-tol').value;
+  const sLo=+document.getElementById('s-min').value,sHi=+document.getElementById('s-max').value;
+  const vLo=+document.getElementById('v-min').value,vHi=+document.getElementById('v-max').value;
+  const nLo=+document.getElementById('note-min').value,nHi=+document.getElementById('note-max').value;
+  const thr=+document.getElementById('note-thresh').value;
+  const scl=document.getElementById('scale-select').value;
+  const root=+document.getElementById('root-note').value;
 
-  // ── GET PARAMS ──
-  const hCenter = parseInt(document.getElementById('hue-center').value);
-  const hTol    = parseInt(document.getElementById('hue-tol').value);
-  const sMinP   = parseInt(document.getElementById('s-min').value);
-  const sMaxP   = parseInt(document.getElementById('s-max').value);
-  const vMinP   = parseInt(document.getElementById('v-min').value);
-  const vMaxP   = parseInt(document.getElementById('v-max').value);
-  const noteMin = parseInt(document.getElementById('note-min').value);
-  const noteMax = parseInt(document.getElementById('note-max').value);
-  const noteThreshPct = parseInt(document.getElementById('note-thresh').value);
-  const scaleName = document.getElementById('scale-select').value;
-  const rootNote = parseInt(document.getElementById('root-note').value);
-
-  // ── BUILD BINARY MASK + OVERLAY ──
-  let totalMatchPx = 0;
-  let sumH = 0, sumS = 0, sumV = 0;
-
-  for (let i = 0; i < PROC_W * PROC_H; i++) {
-    const ri = i * 4;
-    const r = pixels[ri], g = pixels[ri+1], b = pixels[ri+2];
-    const [h, s, v] = rgbToHsv(r, g, b);
-
-    if (hueInRange(h, hCenter, hTol) && s >= sMinP && s <= sMaxP && v >= vMinP && v <= vMaxP) {
-      binaryMask[i] = 1;
-      totalMatchPx++;
-      sumH += h; sumS += s; sumV += v;
-      overlayData[ri] = 0; overlayData[ri+1] = 212; overlayData[ri+2] = 255; overlayData[ri+3] = 150;
-    } else {
-      binaryMask[i] = 0;
-      overlayData[ri] = 0; overlayData[ri+1] = 0; overlayData[ri+2] = 0; overlayData[ri+3] = 90;
+  let mp=0,sH=0,sS=0,sV=0;
+  for(let i=0;i<PROC_W*PROC_H;i++){
+    const ri=i*4;
+    const[h,s,v]=rgbToHsv(px[ri],px[ri+1],px[ri+2]);
+    if(hueInRange(h,hC,hT)&&s>=sLo&&s<=sHi&&v>=vLo&&v<=vHi){
+      binMask[i]=1;mp++;sH+=h;sS+=s;sV+=v;
+      ovData[ri]=0;ovData[ri+1]=212;ovData[ri+2]=255;ovData[ri+3]=140;
+    }else{
+      binMask[i]=0;
+      ovData[ri]=0;ovData[ri+1]=0;ovData[ri+2]=0;ovData[ri+3]=75;
     }
   }
 
-  const totalPx = PROC_W * PROC_H;
-  const totalMatchPct = totalMatchPx / totalPx * 100;
-  const minBlobPx = (noteThreshPct / 100) * totalPx * 0.3; // per-blob minimum
+  const aH=mp?sH/mp:hC,aS=mp?sS/mp:50,aV=mp?sV/mp:50;
+  sm.sat=smo(sm.sat,aS/100*127);sm.val=smo(sm.val,aV/100*127);sm.area=smo(sm.area,mp/(PROC_W*PROC_H)*127);
 
-  const avgH = totalMatchPx > 0 ? sumH / totalMatchPx : hCenter;
-  const avgS = totalMatchPx > 0 ? sumS / totalMatchPx : 50;
-  const avgV = totalMatchPx > 0 ? sumV / totalMatchPx : 50;
+  const blobs=findBlobs((thr/100)*(PROC_W*PROC_H)*0.3);
+  const ch=gCh();
+  const vel=T.velFromSat?Math.max(1,Math.round(sm.sat)):100;
 
-  // Smooth global HSV
-  smoothedVals.sat  = smooth(smoothedVals.sat,  avgS / 100 * 127);
-  smoothedVals.val  = smooth(smoothedVals.val,  avgV / 100 * 127);
-  smoothedVals.area = smooth(smoothedVals.area, totalMatchPct / 100 * 127);
-  smoothedVals.hue  = smooth(smoothedVals.hue, avgH);
-
-  // ── FIND BLOBS (connected components BFS) ──
-  const blobs = findBlobs(binaryMask, PROC_W, PROC_H, minBlobPx);
-
-  // ── NOTE ON/OFF PER BLOB ──
-  const ch = getChannel();
-  const velocity = toggleStates.velFromSat ? Math.max(1, Math.round(smoothedVals.sat)) : 100;
-
-  for (let bi = 0; bi < MAX_BLOBS; bi++) {
-    const state = blobNoteState[bi];
-    const blob = blobs[bi];
-
-    if (blob) {
-      // Map blob X position to note (left=low, right=high)
-      const notePos = Math.max(0, Math.min(1, blob.cx));
-      const targetNote = getScaleNote(notePos, rootNote, scaleName, noteMin, noteMax);
-      state.smoothX = smooth(state.smoothX, blob.cx * 127);
-      state.smoothY = smooth(state.smoothY, blob.cy * 127);
-
-      if (!state.active) {
-        state.note = targetNote;
-        state.active = true;
-        sendNoteOnCh(targetNote, velocity, ch + bi < 16 ? ch + bi : ch);
-      } else if (state.note !== targetNote) {
-        sendNoteOffCh(state.note, ch + bi < 16 ? ch + bi : ch);
-        state.note = targetNote;
-        sendNoteOnCh(targetNote, velocity, ch + bi < 16 ? ch + bi : ch);
+  // Note events — gated
+  for(let bi=0;bi<MAX_BLOBS;bi++){
+    const s=blobSt[bi],b=blobs[bi],bc=Math.min(15,ch+bi);
+    if(b){
+      s.smX=smo(s.smX,b.cx*127);s.smY=smo(s.smY,b.cy*127);
+      const tgt=getScaleNote(Math.max(0,Math.min(1,b.cx)),root,scl,nLo,nHi);
+      if(!s.active){
+        s.note=tgt;s.active=true;noteOnCh(tgt,vel,bc);
+      }else if(s.note!==tgt&&gateOpen){
+        noteOffCh(s.note,bc);s.note=tgt;noteOnCh(tgt,vel,bc);
       }
-    } else {
-      // Blob gone — send note off
-      if (state.active && state.note !== null) {
-        sendNoteOffCh(state.note, ch + bi < 16 ? ch + bi : ch);
-        state.note = null;
-        state.active = false;
-      }
+    }else if(s.active){
+      noteOffCh(s.note,bc);s.note=null;s.active=false;
     }
   }
+  if(gateOpen)gateOpen=false;
 
-  // ── CC OUTPUT (use primary blob or global) ──
-  const primary = blobs[0];
-  const pX = primary ? smooth(blobNoteState[0].smoothX, blobNoteState[0].smoothX) : smoothedVals.x;
-  const pY = primary ? smooth(blobNoteState[0].smoothY, blobNoteState[0].smoothY) : smoothedVals.y;
-  smoothedVals.x = smooth(smoothedVals.x, primary ? primary.cx * 127 : smoothedVals.x);
-  smoothedVals.y = smooth(smoothedVals.y, primary ? primary.cy * 127 : smoothedVals.y);
+  // CC
+  sm.x=smo(sm.x,blobs[0]?blobs[0].cx*127:sm.x);
+  sm.y=smo(sm.y,blobs[0]?blobs[0].cy*127:sm.y);
+  if(T.ccX)sendCC(+document.getElementById('cc-x-num').value,Math.round(sm.x));
+  if(T.ccY)sendCC(+document.getElementById('cc-y-num').value,Math.round(sm.y));
+  if(T.ccSat)sendCC(+document.getElementById('cc-sat-num').value,Math.round(sm.sat));
+  if(T.ccVal)sendCC(+document.getElementById('cc-val-num').value,Math.round(sm.val));
+  if(T.ccArea)sendCC(+document.getElementById('cc-area-num').value,Math.round(sm.area));
+  if(T.pitchBend&&blobs[0]){let d=aH-hC;if(d>180)d-=360;if(d<-180)d+=360;sendPB(Math.max(0,Math.min(16383,Math.round(8192+(d/hT)*8191))));}
 
-  if (toggleStates.ccX)    sendCC(parseInt(document.getElementById('cc-x-num').value),   Math.round(smoothedVals.x));
-  if (toggleStates.ccY)    sendCC(parseInt(document.getElementById('cc-y-num').value),   Math.round(smoothedVals.y));
-  if (toggleStates.ccSat)  sendCC(parseInt(document.getElementById('cc-sat-num').value), Math.round(smoothedVals.sat));
-  if (toggleStates.ccVal)  sendCC(parseInt(document.getElementById('cc-val-num').value), Math.round(smoothedVals.val));
-  if (toggleStates.ccArea) sendCC(parseInt(document.getElementById('cc-area-num').value),Math.round(smoothedVals.area));
+  // Render
+  const dw=dc.width,dh=dc.height;
+  dCtx.clearRect(0,0,dw,dh);
+  dCtx.save();if(isMirrored){dCtx.translate(dw,0);dCtx.scale(-1,1);}
+  dCtx.drawImage(video,0,0,dw,dh);dCtx.restore();
+  procCtx.putImageData(new ImageData(ovData,PROC_W,PROC_H),0,0);
+  dCtx.globalAlpha=0.4;dCtx.drawImage(procCv,0,0,dw,dh);dCtx.globalAlpha=1;
 
-  if (toggleStates.pitchBend && primary) {
-    let diff = avgH - hCenter;
-    if (diff > 180) diff -= 360; if (diff < -180) diff += 360;
-    const pb14 = Math.round(8192 + (diff / hTol) * 8191);
-    sendPitchBend(Math.max(0, Math.min(16383, pb14)));
-  }
-
-  // ── RENDER ──
-  const dw = displayCanvas.width, dh = displayCanvas.height;
-  dCtx.clearRect(0, 0, dw, dh);
-
-  // Draw video
-  dCtx.save();
-  if (isMirrored) { dCtx.translate(dw, 0); dCtx.scale(-1, 1); }
-  dCtx.drawImage(video, 0, 0, dw, dh);
-  dCtx.restore();
-
-  // Overlay matched pixels
-  const overlayImg = new ImageData(overlayData, PROC_W, PROC_H);
-  procCtx.putImageData(overlayImg, 0, 0);
-  dCtx.globalAlpha = 0.45;
-  dCtx.drawImage(procCanvas, 0, 0, dw, dh);
-  dCtx.globalAlpha = 1;
-
-  // Draw blob crosshairs + note labels
-  blobs.forEach((blob, bi) => {
-    const bx = blob.cx * dw, by = blob.cy * dh;
-    const col = BLOB_COLORS[bi];
-    const noteForBlob = blobNoteState[bi].note;
-
-    dCtx.strokeStyle = col;
-    dCtx.lineWidth = 2.5;
-    const r = 20 + bi * 5;
-    dCtx.beginPath(); dCtx.arc(bx, by, r, 0, Math.PI * 2); dCtx.stroke();
-    dCtx.beginPath(); dCtx.moveTo(bx - r-8, by); dCtx.lineTo(bx + r+8, by); dCtx.stroke();
-    dCtx.beginPath(); dCtx.moveTo(bx, by - r-8); dCtx.lineTo(bx, by + r+8); dCtx.stroke();
-
-    // Blob index badge
-    dCtx.fillStyle = col;
-    dCtx.font = 'bold 11px Space Mono, monospace';
-    dCtx.textAlign = 'center';
-    const label = noteForBlob ? `${bi+1}: ${midiToName(noteForBlob)}` : `${bi+1}`;
-    dCtx.fillStyle = 'rgba(0,0,0,0.75)';
-    const lw = dCtx.measureText(label).width;
-    dCtx.fillRect(bx - lw/2 - 4, by - r - 22, lw + 8, 18);
-    dCtx.fillStyle = col;
-    dCtx.fillText(label, bx, by - r - 8);
+  blobs.forEach((b,bi)=>{
+    const bx=b.cx*dw,by=b.cy*dh,col=BLOB_COLORS[bi],r=20+bi*4;
+    dCtx.strokeStyle=col;dCtx.lineWidth=2.5;
+    dCtx.beginPath();dCtx.arc(bx,by,r,0,Math.PI*2);dCtx.stroke();
+    dCtx.beginPath();dCtx.moveTo(bx-r-8,by);dCtx.lineTo(bx+r+8,by);dCtx.stroke();
+    dCtx.beginPath();dCtx.moveTo(bx,by-r-8);dCtx.lineTo(bx,by+r+8);dCtx.stroke();
+    const lbl=blobSt[bi].note!=null?`${bi+1}:${midiToName(blobSt[bi].note)}`:`${bi+1}`;
+    dCtx.font='bold 11px Space Mono,monospace';dCtx.textAlign='center';
+    const lw=dCtx.measureText(lbl).width;
+    dCtx.fillStyle='rgba(0,0,0,.75)';dCtx.fillRect(bx-lw/2-4,by-r-22,lw+8,18);
+    dCtx.fillStyle=col;dCtx.fillText(lbl,bx,by-r-8);
   });
 
-  // ── UPDATE UI STATS ──
-  document.getElementById('stat-area').textContent = blobs.length + ' blob' + (blobs.length !== 1 ? 's' : '');
-  document.getElementById('stat-hsv').textContent = blobs.length
-    ? `${Math.round(avgH)}° ${Math.round(avgS)}% ${Math.round(avgV)}%` : '—';
-  document.getElementById('stat-xy').textContent = blobs[0]
-    ? `${Math.round(blobs[0].cx * 100)}% ${Math.round(blobs[0].cy * 100)}%` : '—';
-  const activeNotes = blobNoteState.filter(s => s.active && s.note !== null).map(s => midiToName(s.note));
-  document.getElementById('stat-note').textContent = activeNotes.length ? activeNotes.join(' ') : '—';
-}
-
-// ── CANVAS RESIZE ────────────────────────────────────────────────
-function resizeDisplayCanvas() {
-  const wrap = document.getElementById('video-wrap');
-  displayCanvas.width = wrap.clientWidth;
-  displayCanvas.height = wrap.clientHeight;
-}
-
-// ── HUE SPECTRUM ────────────────────────────────────────────────
-function drawHueSpectrum() {
-  const w = hueSpecCanvas.clientWidth || 276;
-  hueSpecCanvas.width = w; hueSpecCanvas.height = 20;
-  const ctx = hueSpecCanvas.getContext('2d');
-  for (let x = 0; x < w; x++) {
-    const h = x / w * 360;
-    ctx.fillStyle = hsvToRgbStr(h, 80, 90);
-    ctx.fillRect(x, 0, 1, 20);
+  // Scrubber update
+  if(inputMode==='file'&&video.duration){
+    document.getElementById('scrubber').value=video.currentTime;
+    const f=s=>`${Math.floor(s/60)}:${String(Math.floor(s%60)).padStart(2,'0')}`;
+    document.getElementById('time-display').textContent=`${f(video.currentTime)} / ${f(video.duration)}`;
   }
+
+  document.getElementById('stat-blobs').textContent=blobs.length||'—';
+  document.getElementById('stat-hsv').textContent=mp?`${Math.round(aH)}° ${Math.round(aS)}% ${Math.round(aV)}%`:'—';
+  const an=blobSt.filter(s=>s.active&&s.note!=null).map(s=>midiToName(s.note));
+  document.getElementById('stat-note').textContent=an.length?an.join(' '):'—';
+  if(!T.bpmGate)document.getElementById('stat-clock').textContent='FREE';
+}
+
+// ── CANVAS RESIZE ─────────────────────────────────────────────────
+function resizeCanvas(){const w=document.getElementById('video-wrap');dc.width=w.clientWidth;dc.height=w.clientHeight;}
+
+// ── HUE SPECTRUM ──────────────────────────────────────────────────
+function drawHueSpectrum(){
+  const w=hueSpec.clientWidth||276;hueSpec.width=w;hueSpec.height=20;
+  const ctx=hueSpec.getContext('2d');
+  for(let x=0;x<w;x++){ctx.fillStyle=hsvToRgbStr(x/w*360,80,90);ctx.fillRect(x,0,1,20);}
   updateHueIndicator();
 }
-
-function updateHueIndicator() {
-  const center = parseInt(document.getElementById('hue-center').value);
-  const tol    = parseInt(document.getElementById('hue-tol').value);
-  const w = hueSpecCanvas.clientWidth || 276;
-  const indicator = document.getElementById('hue-range-indicator');
-  const centerLine = document.getElementById('hue-center-line');
-  const lo = Math.max(0, (center - tol) / 360 * 100);
-  const hi = Math.min(100, (center + tol) / 360 * 100);
-  indicator.style.left   = lo + '%';
-  indicator.style.width  = (hi - lo) + '%';
-  centerLine.style.left  = (center / 360 * 100) + '%';
-  // Update swatch
-  colorSwatch.style.background =
-    `linear-gradient(to right, ${hsvToRgbStr(center-tol,70,85)}, ${hsvToRgbStr(center,90,95)}, ${hsvToRgbStr(center+tol,70,85)})`;
+function updateHueIndicator(){
+  const c=+document.getElementById('hue-center').value,t=+document.getElementById('hue-tol').value;
+  document.getElementById('hue-range-indicator').style.left=Math.max(0,(c-t)/360*100)+'%';
+  document.getElementById('hue-range-indicator').style.width=Math.min(100,t*2/360*100)+'%';
+  document.getElementById('hue-center-line').style.left=(c/360*100)+'%';
+  document.getElementById('color-swatch').style.background=
+    `linear-gradient(to right,${hsvToRgbStr(c-t,70,85)},${hsvToRgbStr(c,90,95)},${hsvToRgbStr(c+t,70,85)})`;
+}
+function updateDisplays(){
+  document.getElementById('hue-center-val').textContent=document.getElementById('hue-center').value+'°';
+  document.getElementById('hue-tol-val').textContent='±'+document.getElementById('hue-tol').value;
+  document.getElementById('s-min-val').textContent=document.getElementById('s-min').value+'%';
+  document.getElementById('s-max-val').textContent=document.getElementById('s-max').value+'%';
+  document.getElementById('v-min-val').textContent=document.getElementById('v-min').value+'%';
+  document.getElementById('v-max-val').textContent=document.getElementById('v-max').value+'%';
+  document.getElementById('note-min-val').textContent=midiToName(+document.getElementById('note-min').value);
+  document.getElementById('note-max-val').textContent=midiToName(+document.getElementById('note-max').value);
+  document.getElementById('note-thresh-val').textContent=document.getElementById('note-thresh').value+'%';
+}
+function syncBpmUI(){
+  document.getElementById('bpm-slider').value=bpm;
+  document.getElementById('bpm-val').textContent=bpm;
+  document.getElementById('bpm-display').innerHTML=bpm+' <span>BPM</span>';
 }
 
-// ── LEARN MODE ──────────────────────────────────────────────────
-learnBtn.addEventListener('click', () => {
-  learningMode = !learningMode;
-  learnOverlay.className = learningMode ? 'active' : '';
-  learnBtn.className = learningMode ? 'learning' : '';
-  learnBtn.textContent = learningMode ? '⏹ CANCEL' : '🎯 LEARN';
+// ── EVENT LISTENERS ────────────────────────────────────────────────
+
+// Mode tabs
+document.getElementById('tab-cam').addEventListener('click',()=>{
+  inputMode='camera';
+  document.getElementById('tab-cam').classList.add('active');
+  document.getElementById('tab-file').classList.remove('active');
+  document.getElementById('cam-controls').style.display='flex';
+  document.getElementById('file-controls').classList.remove('open');
+});
+document.getElementById('tab-file').addEventListener('click',()=>{
+  inputMode='file';
+  document.getElementById('tab-file').classList.add('active');
+  document.getElementById('tab-cam').classList.remove('active');
+  document.getElementById('cam-controls').style.display='none';
+  document.getElementById('file-controls').classList.add('open');
+  if(video.srcObject){video.srcObject.getTracks().forEach(t=>t.stop());video.srcObject=null;isRunning=false;}
 });
 
-// Fix: click handler on the OVERLAY (which intercepts clicks in learn mode), not the canvas beneath
-learnOverlay.addEventListener('click', e => {
-  if (!learningMode) return;
-  // Map overlay click coords → proc canvas coords
-  const rect = learnOverlay.getBoundingClientRect();
-  let xRatio = (e.clientX - rect.left) / rect.width;
-  const yRatio = (e.clientY - rect.top) / rect.height;
-  // Account for mirror flip — procCanvas is already drawn mirrored, display canvas too
-  // so ratios map directly
-  const px = Math.max(0, Math.min(PROC_W - 6, Math.floor(xRatio * PROC_W)));
-  const py = Math.max(0, Math.min(PROC_H - 6, Math.floor(yRatio * PROC_H)));
+// Camera
+document.getElementById('start-cam-btn').addEventListener('click',()=>isRunning?stopCamera():startCamera());
+document.getElementById('mirror-toggle').addEventListener('change',e=>isMirrored=e.target.checked);
 
-  // Sample a 9x9 region from proc canvas (drawn with latest video frame)
-  const RADIUS = 4;
-  const sx = Math.max(0, px - RADIUS), sy = Math.max(0, py - RADIUS);
-  const sw = Math.min(PROC_W - sx, RADIUS*2+1), sh = Math.min(PROC_H - sy, RADIUS*2+1);
-  const sample = procCtx.getImageData(sx, sy, sw, sh).data;
+// File
+const dropZone=document.getElementById('file-drop');
+dropZone.addEventListener('click',()=>document.getElementById('file-input').click());
+dropZone.addEventListener('dragover',e=>{e.preventDefault();dropZone.classList.add('dragover');});
+dropZone.addEventListener('dragleave',()=>dropZone.classList.remove('dragover'));
+dropZone.addEventListener('drop',e=>{e.preventDefault();dropZone.classList.remove('dragover');loadFile(e.dataTransfer.files[0]);});
+document.getElementById('file-input').addEventListener('change',e=>loadFile(e.target.files[0]));
+document.getElementById('play-pause-btn').addEventListener('click',function(){
+  if(video.paused){video.play();this.textContent='⏸ PAUSE';}
+  else{video.pause();this.textContent='▶ PLAY';}
+});
+document.getElementById('loop-btn').addEventListener('click',function(){
+  video.loop=!video.loop;this.classList.toggle('active',video.loop);
+  this.textContent=video.loop?'↺ LOOPING':'↺ LOOP';
+});
+document.getElementById('speed-select').addEventListener('change',e=>video.playbackRate=parseFloat(e.target.value));
+document.getElementById('unload-btn').addEventListener('click',unloadFile);
+document.getElementById('scrubber').addEventListener('input',e=>video.currentTime=parseFloat(e.target.value));
+video.addEventListener('ended',()=>{
+  document.getElementById('play-pause-btn').textContent='▶ PLAY';
+  if(!video.loop){isRunning=false;allNotesOff();}
+});
 
-  // Collect HSV values, use median-ish (exclude outliers by collecting all then picking centre)
-  const hs=[], ss=[], vs=[];
-  for (let i = 0; i < sample.length; i += 4) {
-    const [h, s, v] = rgbToHsv(sample[i], sample[i+1], sample[i+2]);
-    if (s > 5 && v > 5) { hs.push(h); ss.push(s); vs.push(v); }
+// BPM
+document.getElementById('bpm-slider').addEventListener('input',e=>{bpm=parseInt(e.target.value);syncBpmUI();});
+const tapBtn=document.getElementById('tap-btn');
+tapBtn.addEventListener('click',()=>{
+  const now=performance.now();
+  tapTimes.push(now);if(tapTimes.length>8)tapTimes.shift();
+  tapBtn.classList.add('flash');setTimeout(()=>tapBtn.classList.remove('flash'),120);
+  if(tapTimes.length>=2){
+    const ivs=[];for(let i=1;i<tapTimes.length;i++)ivs.push(tapTimes[i]-tapTimes[i-1]);
+    bpm=Math.max(20,Math.min(300,Math.round(60000/(ivs.reduce((a,b)=>a+b)/ivs.length))));
+    syncBpmUI();
   }
-  if (hs.length === 0) return; // sampled a near-black or near-white area
-
-  hs.sort((a,b)=>a-b); ss.sort((a,b)=>a-b); vs.sort((a,b)=>a-b);
-  const mid = Math.floor(hs.length / 2);
-  const h = hs[mid], s = ss[mid], v = vs[mid];
-
-  document.getElementById('hue-center').value = Math.round(h);
-  document.getElementById('hue-tol').value = 18;
-  document.getElementById('s-min').value = Math.max(0, Math.round(s) - 25);
-  document.getElementById('s-max').value = 100;
-  document.getElementById('v-min').value = Math.max(0, Math.round(v) - 35);
-  document.getElementById('v-max').value = 100;
-  updateAllDisplayValues();
-  updateHueIndicator();
-
-  learningMode = false;
-  learnOverlay.className = '';
-  learnBtn.className = '';
-  learnBtn.textContent = '🎯 LEARN';
+  clearTimeout(tapBtn._t);tapBtn._t=setTimeout(()=>tapTimes.length=0,3000);
 });
 
-// ── SLIDER DISPLAY UPDATE ────────────────────────────────────────
-function updateAllDisplayValues() {
-  document.getElementById('hue-center-val').textContent = document.getElementById('hue-center').value + '°';
-  document.getElementById('hue-tol-val').textContent    = '±' + document.getElementById('hue-tol').value;
-  document.getElementById('s-min-val').textContent  = document.getElementById('s-min').value + '%';
-  document.getElementById('s-max-val').textContent  = document.getElementById('s-max').value + '%';
-  document.getElementById('v-min-val').textContent  = document.getElementById('v-min').value + '%';
-  document.getElementById('v-max-val').textContent  = document.getElementById('v-max').value + '%';
-  document.getElementById('note-min-val').textContent  = midiToName(parseInt(document.getElementById('note-min').value));
-  document.getElementById('note-max-val').textContent  = midiToName(parseInt(document.getElementById('note-max').value));
-  document.getElementById('note-thresh-val').textContent = document.getElementById('note-thresh').value + '%';
-}
+document.querySelectorAll('.sdv').forEach(btn=>btn.addEventListener('click',()=>{
+  document.querySelectorAll('.sdv').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');subdivision=parseInt(btn.dataset.div);
+}));
 
-['hue-center','hue-tol','s-min','s-max','v-min','v-max','note-min','note-max','note-thresh'].forEach(id => {
-  document.getElementById(id).addEventListener('input', () => {
-    updateAllDisplayValues();
-    updateHueIndicator();
-  });
+// Toggles
+document.querySelectorAll('.toggle').forEach(t=>t.addEventListener('click',()=>{
+  const k=t.dataset.key;if(!k)return;
+  T[k]=!T[k];t.classList.toggle('on',T[k]);
+  if(k==='bpmGate'&&!T[k]){gateOpen=true;document.getElementById('stat-clock').textContent='FREE';}
+  if(k==='midiClkSync')document.getElementById('midi-clk-dot').classList.toggle('on',T[k]);
+}));
+
+// Sliders
+['hue-center','hue-tol','s-min','s-max','v-min','v-max','note-min','note-max','note-thresh']
+  .forEach(id=>document.getElementById(id).addEventListener('input',()=>{updateDisplays();updateHueIndicator();}));
+
+document.getElementById('midi-output-select').addEventListener('change',updateOutput);
+document.getElementById('panic-btn').addEventListener('click',allNotesOff);
+document.getElementById('clear-log-btn').addEventListener('click',()=>{logArr=[];logEl.innerHTML='';});
+document.getElementById('help-toggle').addEventListener('click',()=>{
+  const c=document.getElementById('help-content');c.className=c.className==='open'?'':'open';
 });
+window.addEventListener('resize',()=>{resizeCanvas();drawHueSpectrum();});
 
-// ── TOGGLE SWITCHES ──────────────────────────────────────────────
-document.querySelectorAll('.toggle').forEach(t => {
-  t.addEventListener('click', () => {
-    const key = t.dataset.key;
-    if (!key) return;
-    toggleStates[key] = !toggleStates[key];
-    t.className = 'toggle' + (toggleStates[key] ? ' on' : '');
-  });
-});
-
-// ── HELP TOGGLE ──────────────────────────────────────────────────
-document.getElementById('help-toggle').addEventListener('click', () => {
-  const c = document.getElementById('help-content');
-  c.className = c.className === 'open' ? '' : 'open';
-});
-
-// ── MISC CONTROLS ────────────────────────────────────────────────
-document.getElementById('start-cam-btn').addEventListener('click', () => {
-  isRunning ? stopCamera() : startCamera();
-});
-document.getElementById('panic-btn').addEventListener('click', allNotesOff);
-document.getElementById('clear-log-btn').addEventListener('click', () => { logEntries=[]; renderLog(); });
-document.getElementById('midi-output-select').addEventListener('change', updateMidiOutput);
-document.getElementById('mirror-toggle').addEventListener('change', e => { isMirrored = e.target.checked; });
-
-// ── RESIZE ───────────────────────────────────────────────────────
-window.addEventListener('resize', () => { resizeDisplayCanvas(); drawHueSpectrum(); });
-
-// ── INIT ─────────────────────────────────────────────────────────
-initMIDI();
-resizeDisplayCanvas();
-updateAllDisplayValues();
-updateHueIndicator();
-setTimeout(drawHueSpectrum, 200); // after fonts/layout settle
+// ── INIT ──────────────────────────────────────────────────────────
+initMIDI();resizeCanvas();updateDisplays();updateHueIndicator();setTimeout(drawHueSpectrum,200);
 </script>
 </body>
 </html>
