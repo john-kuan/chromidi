@@ -1,0 +1,1047 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CHROMIDI — Color to MIDI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:       #07070f;
+  --bg2:      #0d0d1a;
+  --bg3:      #131326;
+  --border:   #1e1e3a;
+  --border2:  #2a2a50;
+  --text:     #c0c0da;
+  --text-dim: #50506a;
+  --text-hi:  #f0f0ff;
+  --accent:   #00d4ff;
+  --red:      #ff2060;
+  --green:    #40ff80;
+  --yellow:   #ffd030;
+  --font-d:   'Bebas Neue', sans-serif;
+  --font-m:   'Space Mono', monospace;
+  --r:        4px;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;overflow-x:hidden;}
+body{background:var(--bg);color:var(--text);font-family:var(--font-m);font-size:11px;line-height:1.5;}
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar{width:4px;}
+::-webkit-scrollbar-track{background:var(--bg);}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px;}
+
+/* ── HEADER ── */
+#header{
+  display:flex;align-items:center;gap:16px;padding:10px 16px;
+  background:var(--bg2);border-bottom:1px solid var(--border);
+  position:sticky;top:0;z-index:10;
+}
+#logo{font-family:var(--font-d);font-size:28px;letter-spacing:2px;color:var(--text-hi);line-height:1;}
+#logo span{color:var(--accent);}
+#tagline{color:var(--text-dim);font-size:10px;margin-top:2px;}
+#header-right{margin-left:auto;display:flex;align-items:center;gap:12px;}
+#midi-status-dot{width:8px;height:8px;border-radius:50%;background:var(--text-dim);flex-shrink:0;transition:.3s;}
+#midi-status-dot.ok{background:var(--green);box-shadow:0 0 8px var(--green);}
+#midi-status-dot.err{background:var(--red);box-shadow:0 0 8px var(--red);}
+#midi-status-dot.active{background:var(--accent);box-shadow:0 0 8px var(--accent);}
+#midi-label{color:var(--text-dim);font-size:10px;}
+select{
+  background:var(--bg3);border:1px solid var(--border2);color:var(--text);
+  font-family:var(--font-m);font-size:11px;padding:4px 8px;border-radius:var(--r);
+  cursor:pointer;outline:none;
+}
+select:focus{border-color:var(--accent);}
+
+/* ── MAIN LAYOUT ── */
+#main{display:flex;gap:0;height:calc(100vh - 53px);}
+#left-panel{flex:1;min-width:0;display:flex;flex-direction:column;border-right:1px solid var(--border);}
+#right-panel{width:300px;overflow-y:auto;flex-shrink:0;}
+
+/* ── VIDEO AREA ── */
+#video-wrap{position:relative;background:#000;flex:1;min-height:0;overflow:hidden;}
+#display-canvas{width:100%;height:100%;object-fit:contain;display:block;}
+video{display:none;}
+#no-cam{
+  position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;gap:8px;color:var(--text-dim);
+}
+#no-cam .icon{font-size:40px;}
+#learn-overlay{
+  position:absolute;inset:0;pointer-events:none;
+  display:flex;align-items:center;justify-content:center;
+  opacity:0;transition:.2s;
+}
+#learn-overlay.active{opacity:1;pointer-events:auto;cursor:crosshair;}
+#learn-overlay-bg{
+  position:absolute;inset:0;background:rgba(0,212,255,0.08);
+  border:2px solid var(--accent);
+}
+#learn-overlay-text{
+  background:rgba(0,212,255,0.9);color:#000;
+  font-family:var(--font-d);font-size:22px;letter-spacing:2px;
+  padding:8px 20px;border-radius:var(--r);position:relative;
+}
+
+/* ── STATS BAR ── */
+#stats-bar{
+  display:flex;gap:0;border-top:1px solid var(--border);
+  background:var(--bg2);flex-shrink:0;
+}
+.stat{
+  flex:1;padding:6px 10px;border-right:1px solid var(--border);
+  display:flex;flex-direction:column;gap:1px;
+}
+.stat:last-child{border-right:none;}
+.stat-label{color:var(--text-dim);font-size:9px;letter-spacing:1px;}
+.stat-val{color:var(--text-hi);font-size:13px;font-weight:700;}
+.stat-val.active{color:var(--accent);}
+
+/* ── RIGHT PANEL / MODULES ── */
+.module{border-bottom:1px solid var(--border);padding:12px;}
+.module-title{
+  font-family:var(--font-d);font-size:16px;letter-spacing:1px;
+  color:var(--text-hi);margin-bottom:10px;display:flex;align-items:center;gap:8px;
+}
+.module-title .dot{
+  width:6px;height:6px;border-radius:50%;background:var(--accent);
+  flex-shrink:0;
+}
+
+/* ── CONTROLS ── */
+.row{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
+.row:last-child{margin-bottom:0;}
+label{color:var(--text-dim);font-size:10px;letter-spacing:.5px;white-space:nowrap;min-width:28px;}
+.val-box{
+  background:var(--bg);border:1px solid var(--border);
+  color:var(--accent);font-family:var(--font-m);font-size:11px;
+  padding:2px 6px;border-radius:2px;min-width:36px;text-align:right;
+  flex-shrink:0;
+}
+
+/* ── RANGE SLIDERS ── */
+input[type=range]{
+  -webkit-appearance:none;appearance:none;
+  flex:1;height:4px;background:var(--border2);border-radius:2px;outline:none;cursor:pointer;
+}
+input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none;appearance:none;
+  width:14px;height:14px;border-radius:50%;
+  background:var(--accent);cursor:pointer;
+  box-shadow:0 0 6px var(--accent);transition:.1s;
+}
+input[type=range]::-webkit-slider-thumb:hover{width:16px;height:16px;}
+input[type=range].red-track::-webkit-slider-thumb{background:var(--red);box-shadow:0 0 6px var(--red);}
+input[type=range].green-track::-webkit-slider-thumb{background:var(--green);box-shadow:0 0 6px var(--green);}
+
+/* ── HUE SPECTRUM ── */
+#hue-spectrum-wrap{margin:8px 0;position:relative;}
+#hue-spectrum{width:100%;height:20px;border-radius:var(--r);display:block;}
+#hue-range-indicator{
+  position:absolute;top:0;height:100%;pointer-events:none;
+  border:2px solid #fff;border-radius:var(--r);opacity:.8;
+  box-shadow:0 0 8px rgba(255,255,255,.4);
+}
+#hue-center-line{
+  position:absolute;top:0;width:2px;height:100%;background:#fff;
+  transform:translateX(-50%);opacity:.9;pointer-events:none;
+}
+
+/* ── COLOR SWATCH ── */
+#color-swatch-row{display:flex;gap:6px;align-items:stretch;margin:8px 0;}
+#color-swatch{
+  flex:1;height:36px;border-radius:var(--r);
+  border:1px solid var(--border);transition:.2s;
+}
+#learn-btn{
+  background:transparent;border:1px solid var(--accent);
+  color:var(--accent);font-family:var(--font-d);font-size:14px;
+  letter-spacing:1px;padding:4px 12px;border-radius:var(--r);
+  cursor:pointer;transition:.15s;white-space:nowrap;
+}
+#learn-btn:hover{background:var(--accent);color:#000;}
+#learn-btn.learning{background:var(--accent);color:#000;animation:pulse 1s infinite;}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.6;}}
+
+/* ── BUTTONS ── */
+.btn{
+  background:var(--bg3);border:1px solid var(--border2);
+  color:var(--text);font-family:var(--font-m);font-size:11px;
+  padding:5px 10px;border-radius:var(--r);cursor:pointer;transition:.15s;
+}
+.btn:hover{border-color:var(--accent);color:var(--accent);}
+.btn.danger:hover{border-color:var(--red);color:var(--red);}
+.btn.active{background:var(--accent);color:#000;border-color:var(--accent);}
+
+/* ── TOGGLES ── */
+.toggle-row{display:flex;align-items:center;gap:8px;margin-bottom:6px;cursor:pointer;}
+.toggle{
+  width:28px;height:14px;background:var(--border2);border-radius:7px;
+  position:relative;transition:.2s;flex-shrink:0;cursor:pointer;
+}
+.toggle.on{background:var(--accent);}
+.toggle::after{
+  content:'';position:absolute;top:2px;left:2px;
+  width:10px;height:10px;border-radius:50%;background:#fff;
+  transition:.2s;
+}
+.toggle.on::after{transform:translateX(14px);}
+.toggle-label{color:var(--text);font-size:10px;flex:1;}
+.toggle-cc{color:var(--text-dim);font-size:10px;font-style:italic;}
+
+/* ── CC ROUTING MINI SELECTS ── */
+.cc-row{display:flex;align-items:center;gap:6px;margin-bottom:5px;}
+.cc-row .toggle-label{min-width:80px;}
+.cc-row select{font-size:10px;padding:2px 4px;}
+
+/* ── ACTIVITY LOG ── */
+#activity-log{
+  background:var(--bg);border:1px solid var(--border);border-radius:var(--r);
+  height:120px;overflow-y:auto;padding:4px;
+}
+.log-entry{
+  font-size:10px;padding:2px 0;border-bottom:1px solid var(--border);
+  display:flex;gap:8px;color:var(--text-dim);
+}
+.log-entry:last-child{border-bottom:none;}
+.log-entry .log-type{color:var(--accent);font-weight:700;min-width:28px;}
+.log-entry .log-type.noteon{color:var(--green);}
+.log-entry .log-type.noteoff{color:var(--red);}
+.log-entry .log-type.cc{color:var(--yellow);}
+
+/* ── HELP ── */
+#help-toggle{
+  width:100%;text-align:left;cursor:pointer;
+  background:var(--bg2);border:none;color:var(--text-dim);
+  font-family:var(--font-d);font-size:14px;letter-spacing:1px;
+  padding:10px 12px;display:flex;justify-content:space-between;align-items:center;
+}
+#help-toggle:hover{color:var(--text);}
+#help-content{display:none;padding:10px 12px;font-size:10px;color:var(--text-dim);line-height:1.7;}
+#help-content.open{display:block;}
+#help-content h4{color:var(--text);margin:8px 0 4px;font-size:11px;}
+#help-content p{margin-bottom:6px;}
+#help-content code{
+  background:var(--bg3);color:var(--accent);padding:1px 4px;
+  border-radius:2px;font-family:var(--font-m);
+}
+
+/* ── FOOTER ── */
+#footer{
+  border-top:1px solid var(--border);padding:6px 16px;
+  background:var(--bg2);display:flex;justify-content:space-between;align-items:center;
+  font-size:10px;color:var(--text-dim);
+}
+
+/* ── MIDI PANIC ── */
+#panic-btn{
+  background:transparent;border:1px solid var(--red);color:var(--red);
+  font-family:var(--font-d);font-size:14px;letter-spacing:1px;
+  padding:3px 10px;border-radius:var(--r);cursor:pointer;transition:.15s;
+}
+#panic-btn:hover{background:var(--red);color:#000;}
+
+/* ── MIRROR CHECKBOX ── */
+.flip-canvas{transform:scaleX(-1);}
+</style>
+</head>
+<body>
+
+<!-- ════════════ HEADER ════════════ -->
+<div id="header">
+  <div>
+    <div id="logo">CHRO<span>MIDI</span></div>
+    <div id="tagline">HSV COLOR → MIDI · CHROME ONLY · NO INSTALL</div>
+  </div>
+  <div id="header-right">
+    <div id="midi-status-dot"></div>
+    <div id="midi-label">NO MIDI</div>
+    <select id="midi-output-select" title="MIDI Output Device">
+      <option value="">— Select MIDI Output —</option>
+    </select>
+    <button id="panic-btn" title="All Notes Off">⏹ PANIC</button>
+  </div>
+</div>
+
+<!-- ════════════ MAIN ════════════ -->
+<div id="main">
+
+  <!-- ── LEFT: VIDEO ── -->
+  <div id="left-panel">
+    <div id="video-wrap">
+      <canvas id="display-canvas"></canvas>
+      <video id="video" autoplay playsinline muted></video>
+      <div id="no-cam">
+        <div class="icon">📷</div>
+        <div>Click <strong>START CAMERA</strong> to begin</div>
+      </div>
+      <div id="learn-overlay">
+        <div id="learn-overlay-bg"></div>
+        <div id="learn-overlay-text">CLICK TO SAMPLE COLOR</div>
+      </div>
+    </div>
+
+    <div id="stats-bar">
+      <div class="stat">
+        <div class="stat-label">BLOB AREA</div>
+        <div class="stat-val" id="stat-area">—</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">HUE·SAT·VAL</div>
+        <div class="stat-val" id="stat-hsv">—</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">CENTROID X·Y</div>
+        <div class="stat-val" id="stat-xy">—</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">MIDI NOTE</div>
+        <div class="stat-val active" id="stat-note">—</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── RIGHT: CONTROLS ── -->
+  <div id="right-panel">
+
+    <!-- Camera Start -->
+    <div class="module">
+      <div class="row" style="gap:8px;flex-wrap:wrap;">
+        <button class="btn" id="start-cam-btn">▶ START CAMERA</button>
+        <label style="min-width:auto;display:flex;align-items:center;gap:4px;cursor:pointer;color:var(--text);">
+          <input type="checkbox" id="mirror-toggle" style="cursor:pointer;">
+          MIRROR
+        </label>
+        <select id="resolution-select" style="font-size:10px;">
+          <option value="640x480">640×480</option>
+          <option value="1280x720">1280×720</option>
+          <option value="320x240">320×240 (fast)</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- COLOR DETECT -->
+    <div class="module">
+      <div class="module-title"><div class="dot"></div>COLOR DETECT</div>
+
+      <div id="hue-spectrum-wrap">
+        <canvas id="hue-spectrum" height="20"></canvas>
+        <div id="hue-range-indicator"></div>
+        <div id="hue-center-line"></div>
+      </div>
+
+      <div id="color-swatch-row">
+        <div id="color-swatch"></div>
+        <button id="learn-btn">🎯 LEARN</button>
+      </div>
+
+      <div class="row">
+        <label>HUE</label>
+        <input type="range" id="hue-center" min="0" max="359" value="120">
+        <div class="val-box" id="hue-center-val">120°</div>
+      </div>
+      <div class="row">
+        <label>TOL±</label>
+        <input type="range" id="hue-tol" min="1" max="90" value="20">
+        <div class="val-box" id="hue-tol-val">±20</div>
+      </div>
+      <div class="row">
+        <label>S MIN</label>
+        <input type="range" id="s-min" min="0" max="100" value="40" class="red-track">
+        <div class="val-box" id="s-min-val">40%</div>
+      </div>
+      <div class="row">
+        <label>S MAX</label>
+        <input type="range" id="s-max" min="0" max="100" value="100" class="red-track">
+        <div class="val-box" id="s-max-val">100%</div>
+      </div>
+      <div class="row">
+        <label>V MIN</label>
+        <input type="range" id="v-min" min="0" max="100" value="30" class="green-track">
+        <div class="val-box" id="v-min-val">30%</div>
+      </div>
+      <div class="row">
+        <label>V MAX</label>
+        <input type="range" id="v-max" min="0" max="100" value="100" class="green-track">
+        <div class="val-box" id="v-max-val">100%</div>
+      </div>
+    </div>
+
+    <!-- MIDI SETUP -->
+    <div class="module">
+      <div class="module-title"><div class="dot" style="background:var(--green)"></div>MIDI SETUP</div>
+
+      <div class="row">
+        <label>CH</label>
+        <select id="midi-ch" style="flex:1;">
+          <option value="0">Channel 1</option><option value="1">Channel 2</option>
+          <option value="2">Channel 3</option><option value="3">Channel 4</option>
+          <option value="4">Channel 5</option><option value="5">Channel 6</option>
+          <option value="6">Channel 7</option><option value="7">Channel 8</option>
+          <option value="8">Channel 9</option><option value="9">Channel 10</option>
+          <option value="10">Channel 11</option><option value="11">Channel 12</option>
+          <option value="12">Channel 13</option><option value="13">Channel 14</option>
+          <option value="14">Channel 15</option><option value="15">Channel 16</option>
+        </select>
+      </div>
+      <div class="row">
+        <label>SCALE</label>
+        <select id="scale-select" style="flex:1;">
+          <option>Chromatic</option><option>Major</option><option selected>Minor</option>
+          <option>Pentatonic Maj</option><option>Pentatonic Min</option>
+          <option>Dorian</option><option>Mixolydian</option><option>Blues</option>
+        </select>
+      </div>
+      <div class="row">
+        <label>ROOT</label>
+        <select id="root-note" style="flex:1;">
+          <option value="0">C</option><option value="1">C#</option><option value="2">D</option>
+          <option value="3">D#</option><option value="4">E</option><option value="5">F</option>
+          <option value="6">F#</option><option value="7">G</option><option value="8">G#</option>
+          <option value="9">A</option><option value="10">A#</option><option value="11">B</option>
+        </select>
+      </div>
+      <div class="row">
+        <label>LOW</label>
+        <input type="range" id="note-min" min="0" max="127" value="36">
+        <div class="val-box" id="note-min-val">C2</div>
+      </div>
+      <div class="row">
+        <label>HIGH</label>
+        <input type="range" id="note-max" min="0" max="127" value="84">
+        <div class="val-box" id="note-max-val">C6</div>
+      </div>
+      <div class="row">
+        <label>GATE</label>
+        <input type="range" id="note-thresh" min="0" max="100" value="5">
+        <div class="val-box" id="note-thresh-val">5%</div>
+      </div>
+      <div class="row" style="font-size:9px;color:var(--text-dim);">
+        GATE = min blob area% to trigger note on
+      </div>
+    </div>
+
+    <!-- CC ROUTING -->
+    <div class="module">
+      <div class="module-title"><div class="dot" style="background:var(--yellow)"></div>CC ROUTING</div>
+      <div style="color:var(--text-dim);font-size:9px;margin-bottom:8px;">Toggle each mapping on/off</div>
+
+      <div class="cc-row">
+        <div class="toggle on" id="cc-x-toggle" data-key="ccX"></div>
+        <div class="toggle-label">X POSITION</div>
+        <select id="cc-x-num" style="font-size:10px;padding:2px 4px;width:56px;">
+          <option value="1">CC1</option><option value="11">CC11</option>
+          <option value="74">CC74</option><option value="73">CC73</option>
+          <option value="71">CC71</option><option value="7">CC7</option><option value="10">CC10</option>
+          <option value="64">CC64</option>
+        </select>
+      </div>
+      <div class="cc-row">
+        <div class="toggle on" id="cc-y-toggle" data-key="ccY"></div>
+        <div class="toggle-label">Y POSITION</div>
+        <select id="cc-y-num" style="font-size:10px;padding:2px 4px;width:56px;">
+          <option value="11">CC11</option><option value="1">CC1</option>
+          <option value="74">CC74</option><option value="73">CC73</option>
+          <option value="71">CC71</option><option value="7">CC7</option><option value="10">CC10</option>
+        </select>
+      </div>
+      <div class="cc-row">
+        <div class="toggle on" id="cc-sat-toggle" data-key="ccSat"></div>
+        <div class="toggle-label">SATURATION</div>
+        <select id="cc-sat-num" style="font-size:10px;padding:2px 4px;width:56px;">
+          <option value="74">CC74</option><option value="1">CC1</option>
+          <option value="11">CC11</option><option value="71">CC71</option>
+          <option value="73">CC73</option><option value="7">CC7</option>
+        </select>
+      </div>
+      <div class="cc-row">
+        <div class="toggle on" id="cc-val-toggle" data-key="ccVal"></div>
+        <div class="toggle-label">BRIGHTNESS</div>
+        <select id="cc-val-num" style="font-size:10px;padding:2px 4px;width:56px;">
+          <option value="7">CC7</option><option value="11">CC11</option>
+          <option value="1">CC1</option><option value="74">CC74</option>
+          <option value="73">CC73</option><option value="71">CC71</option>
+        </select>
+      </div>
+      <div class="cc-row">
+        <div class="toggle" id="cc-area-toggle" data-key="ccArea"></div>
+        <div class="toggle-label">BLOB AREA</div>
+        <select id="cc-area-num" style="font-size:10px;padding:2px 4px;width:56px;">
+          <option value="7">CC7</option><option value="11">CC11</option>
+          <option value="1">CC1</option><option value="74">CC74</option>
+        </select>
+      </div>
+      <div class="cc-row" style="margin-top:8px;">
+        <div class="toggle" id="pb-toggle" data-key="pitchBend"></div>
+        <div class="toggle-label">PITCH BEND (hue offset)</div>
+      </div>
+      <div class="cc-row">
+        <div class="toggle" id="vel-sat-toggle" data-key="velFromSat"></div>
+        <div class="toggle-label">VELOCITY = SATURATION</div>
+      </div>
+    </div>
+
+    <!-- ACTIVITY LOG -->
+    <div class="module">
+      <div class="module-title"><div class="dot" style="background:var(--red)"></div>MIDI ACTIVITY</div>
+      <div id="activity-log"></div>
+      <div class="row" style="margin-top:8px;">
+        <button class="btn" id="clear-log-btn">CLEAR LOG</button>
+      </div>
+    </div>
+
+    <!-- HELP -->
+    <button id="help-toggle">HOW TO USE <span>▼</span></button>
+    <div id="help-content">
+      <h4>1. Start Camera</h4>
+      <p>Click <code>▶ START CAMERA</code> and allow camera access.</p>
+      <h4>2. Pick a Color</h4>
+      <p>Click <code>🎯 LEARN</code> then click any color in the video to set the detection target. Or drag the <code>HUE / TOL± / S / V</code> sliders manually.</p>
+      <h4>3. Connect MIDI</h4>
+      <p>Open a DAW or virtual MIDI port first. Select it from the header dropdown. MIDI uses WebMIDI (Chrome only).</p>
+      <h4>4. Play!</h4>
+      <p>Move a colored object into frame. The detected hue position within your range maps to a MIDI note. Saturation, brightness, and blob position control CCs. When the blob disappears below the <code>GATE</code> threshold, a Note Off fires.</p>
+      <h4>Tips</h4>
+      <p>Bright, saturated objects work best. Use a coloured cloth, LED, or even a printed card. Try the <code>MIRROR</code> option for live performance.</p>
+    </div>
+
+  </div><!-- /right-panel -->
+</div><!-- /main -->
+
+<!-- ════════════ VIDEO (hidden) ════════════ -->
+<video id="video" autoplay playsinline muted style="display:none;"></video>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+//  CHROMIDI — HSV Color Analysis → MIDI
+//  Pure JS (no OpenCV.js needed), WebMIDI, single-file
+// ═══════════════════════════════════════════════════════════════
+
+// ── SCALES ──────────────────────────────────────────────────────
+const SCALES = {
+  'Chromatic':      [0,1,2,3,4,5,6,7,8,9,10,11],
+  'Major':          [0,2,4,5,7,9,11],
+  'Minor':          [0,2,3,5,7,8,10],
+  'Pentatonic Maj': [0,2,4,7,9],
+  'Pentatonic Min': [0,3,5,7,10],
+  'Dorian':         [0,2,3,5,7,9,10],
+  'Mixolydian':     [0,2,4,5,7,9,10],
+  'Blues':          [0,3,5,6,7,10],
+};
+const NOTE_NAMES = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+
+function midiToName(n) {
+  return NOTE_NAMES[n % 12] + (Math.floor(n / 12) - 1);
+}
+
+function getScaleNote(position, root, scaleName, noteMin, noteMax) {
+  const intervals = SCALES[scaleName] || SCALES['Chromatic'];
+  const notes = [];
+  for (let m = 0; m <= 127; m++) {
+    const semi = ((m - root) % 12 + 12) % 12;
+    if (intervals.includes(semi) && m >= noteMin && m <= noteMax) notes.push(m);
+  }
+  if (!notes.length) return Math.round(noteMin + position * (noteMax - noteMin));
+  const idx = Math.min(Math.floor(position * notes.length), notes.length - 1);
+  return notes[idx];
+}
+
+// ── COLOR MATH ──────────────────────────────────────────────────
+function rgbToHsv(r, g, b) {
+  r /= 255; g /= 255; b /= 255;
+  const max = Math.max(r, g, b), min = Math.min(r, g, b), d = max - min;
+  let h = 0;
+  if (d !== 0) {
+    switch (max) {
+      case r: h = ((g - b) / d + (g < b ? 6 : 0)) / 6; break;
+      case g: h = ((b - r) / d + 2) / 6; break;
+      case b: h = ((r - g) / d + 4) / 6; break;
+    }
+  }
+  return [h * 360, max === 0 ? 0 : d / max * 100, max * 100];
+}
+
+function hsvToRgbStr(h, s, v) {
+  h = h % 360; s /= 100; v /= 100;
+  const c = v * s, x = c * (1 - Math.abs((h / 60) % 2 - 1)), m = v - c;
+  let r=0,g=0,b=0;
+  if(h<60){r=c;g=x;}else if(h<120){r=x;g=c;}else if(h<180){g=c;b=x;}
+  else if(h<240){g=x;b=c;}else if(h<300){r=x;b=c;}else{r=c;b=x;}
+  return `rgb(${Math.round((r+m)*255)},${Math.round((g+m)*255)},${Math.round((b+m)*255)})`;
+}
+
+function hueInRange(h, center, tol) {
+  let diff = Math.abs(h - center);
+  if (diff > 180) diff = 360 - diff;
+  return diff <= tol;
+}
+
+// ── STATE ───────────────────────────────────────────────────────
+let midiAccess = null;
+let midiOutput = null;
+let currentNote = null;
+let isRunning = false;
+let learningMode = false;
+let isMirrored = false;
+let lastCCVals = {};
+let smoothedVals = { x: 0, y: 0, sat: 0, val: 0, area: 0, hue: 180 };
+let noteOnHysteresis = false; // true when note is currently on
+
+const toggleStates = {
+  ccX: true, ccY: true, ccSat: true, ccVal: true,
+  ccArea: false, pitchBend: false, velFromSat: false
+};
+
+// Processing canvas (smaller for perf)
+const PROC_W = 320, PROC_H = 240;
+const procCanvas = document.createElement('canvas');
+procCanvas.width = PROC_W; procCanvas.height = PROC_H;
+const procCtx = procCanvas.getContext('2d', { willReadFrequently: true });
+
+// ── DOM REFS ────────────────────────────────────────────────────
+const video = document.getElementById('video');
+const displayCanvas = document.getElementById('display-canvas');
+const dCtx = displayCanvas.getContext('2d');
+const hueSpecCanvas = document.getElementById('hue-spectrum');
+const learnOverlay = document.getElementById('learn-overlay');
+const learnBtn = document.getElementById('learn-btn');
+const colorSwatch = document.getElementById('color-swatch');
+const midiOutputSelect = document.getElementById('midi-output-select');
+const midiStatusDot = document.getElementById('midi-status-dot');
+const midiLabel = document.getElementById('midi-label');
+
+// ── MIDI SETUP ──────────────────────────────────────────────────
+function initMIDI() {
+  if (!navigator.requestMIDIAccess) {
+    midiLabel.textContent = 'MIDI NOT SUPPORTED (USE CHROME)';
+    midiStatusDot.className = 'err';
+    return;
+  }
+  navigator.requestMIDIAccess({ sysex: false }).then(access => {
+    midiAccess = access;
+    midiStatusDot.className = 'ok';
+    midiLabel.textContent = 'MIDI READY';
+    populateMidiOutputs();
+    access.onstatechange = () => populateMidiOutputs();
+  }).catch(err => {
+    midiStatusDot.className = 'err';
+    midiLabel.textContent = 'MIDI BLOCKED';
+    console.warn('MIDI error:', err);
+  });
+}
+
+function populateMidiOutputs() {
+  const sel = midiOutputSelect;
+  const prevVal = sel.value;
+  while (sel.options.length > 1) sel.remove(1);
+  if (!midiAccess) return;
+  for (const out of midiAccess.outputs.values()) {
+    const opt = document.createElement('option');
+    opt.value = out.id; opt.textContent = out.name;
+    sel.appendChild(opt);
+  }
+  if (prevVal) sel.value = prevVal;
+  updateMidiOutput();
+}
+
+function updateMidiOutput() {
+  if (!midiAccess) return;
+  const id = midiOutputSelect.value;
+  midiOutput = id ? midiAccess.outputs.get(id) : null;
+  midiLabel.textContent = midiOutput ? midiOutput.name : 'NO OUTPUT SEL.';
+}
+
+// ── MIDI SEND ───────────────────────────────────────────────────
+function getChannel() { return parseInt(document.getElementById('midi-ch').value) || 0; }
+
+function sendNoteOn(note, vel) {
+  if (!midiOutput) return;
+  const ch = getChannel();
+  vel = Math.max(1, Math.min(127, vel));
+  midiOutput.send([0x90 | ch, note, vel]);
+  midiStatusDot.className = 'active';
+  setTimeout(() => midiStatusDot.className = 'ok', 80);
+  addLog('noteon', `NOTE ON  ${midiToName(note)} vel:${vel}`);
+}
+
+function sendNoteOff(note) {
+  if (!midiOutput) return;
+  const ch = getChannel();
+  midiOutput.send([0x80 | ch, note, 0]);
+  addLog('noteoff', `NOTE OFF ${midiToName(note)}`);
+}
+
+function sendCC(ccNum, val) {
+  if (!midiOutput) return;
+  val = Math.max(0, Math.min(127, Math.round(val)));
+  if (lastCCVals[ccNum] === val) return;
+  lastCCVals[ccNum] = val;
+  const ch = getChannel();
+  midiOutput.send([0xB0 | ch, ccNum, val]);
+  addLog('cc', `CC${ccNum} → ${val}`);
+}
+
+function sendPitchBend(val14bit) {
+  if (!midiOutput) return;
+  const ch = getChannel();
+  const lsb = val14bit & 0x7F;
+  const msb = (val14bit >> 7) & 0x7F;
+  midiOutput.send([0xE0 | ch, lsb, msb]);
+}
+
+function allNotesOff() {
+  if (!midiOutput) return;
+  for (let ch = 0; ch < 16; ch++) {
+    midiOutput.send([0xB0 | ch, 123, 0]);
+  }
+  if (currentNote !== null) { currentNote = null; noteOnHysteresis = false; }
+  addLog('cc', 'ALL NOTES OFF');
+}
+
+// ── ACTIVITY LOG ────────────────────────────────────────────────
+const activityLog = document.getElementById('activity-log');
+let logEntries = [];
+function addLog(type, msg) {
+  const entry = { type, msg };
+  logEntries.unshift(entry);
+  if (logEntries.length > 30) logEntries.pop();
+  renderLog();
+}
+function renderLog() {
+  activityLog.innerHTML = logEntries.slice(0, 12).map(e =>
+    `<div class="log-entry"><span class="log-type ${e.type}">${e.type.toUpperCase()}</span><span>${e.msg}</span></div>`
+  ).join('');
+}
+
+// ── CAMERA ──────────────────────────────────────────────────────
+async function startCamera() {
+  const resStr = document.getElementById('resolution-select').value;
+  const [w, h] = resStr.split('x').map(Number);
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: { width: { ideal: w }, height: { ideal: h }, facingMode: 'user' }
+    });
+    video.srcObject = stream;
+    await video.play();
+    document.getElementById('no-cam').style.display = 'none';
+    isRunning = true;
+    requestAnimationFrame(mainLoop);
+    document.getElementById('start-cam-btn').textContent = '⏹ STOP CAMERA';
+    document.getElementById('start-cam-btn').classList.add('active');
+  } catch(e) {
+    alert('Camera access denied or unavailable: ' + e.message);
+  }
+}
+
+function stopCamera() {
+  if (video.srcObject) { video.srcObject.getTracks().forEach(t => t.stop()); video.srcObject = null; }
+  isRunning = false;
+  document.getElementById('start-cam-btn').textContent = '▶ START CAMERA';
+  document.getElementById('start-cam-btn').classList.remove('active');
+  document.getElementById('no-cam').style.display = 'flex';
+  allNotesOff();
+}
+
+// ── MAIN PROCESSING LOOP ─────────────────────────────────────────
+function smooth(prev, next, f = 0.25) { return prev + (next - prev) * f; }
+
+function mainLoop() {
+  if (!isRunning) return;
+  requestAnimationFrame(mainLoop);
+  if (video.readyState < 2) return;
+
+  // ── DRAW VIDEO TO PROCESSING CANVAS ──
+  procCtx.save();
+  if (isMirrored) { procCtx.translate(PROC_W, 0); procCtx.scale(-1, 1); }
+  procCtx.drawImage(video, 0, 0, PROC_W, PROC_H);
+  procCtx.restore();
+
+  const imageData = procCtx.getImageData(0, 0, PROC_W, PROC_H);
+  const pixels = imageData.data;
+
+  // ── GET PARAMS ──
+  const hCenter = parseInt(document.getElementById('hue-center').value);
+  const hTol    = parseInt(document.getElementById('hue-tol').value);
+  const sMinP   = parseInt(document.getElementById('s-min').value);
+  const sMaxP   = parseInt(document.getElementById('s-max').value);
+  const vMinP   = parseInt(document.getElementById('v-min').value);
+  const vMaxP   = parseInt(document.getElementById('v-max').value);
+  const noteMin = parseInt(document.getElementById('note-min').value);
+  const noteMax = parseInt(document.getElementById('note-max').value);
+  const noteThreshPct = parseInt(document.getElementById('note-thresh').value);
+  const scaleName = document.getElementById('scale-select').value;
+  const rootNote = parseInt(document.getElementById('root-note').value);
+
+  // ── HSV ANALYSIS ──
+  let blobCount = 0;
+  let sumX = 0, sumY = 0, sumH = 0, sumS = 0, sumV = 0;
+  const overlayData = new Uint8ClampedArray(PROC_W * PROC_H * 4);
+
+  for (let i = 0; i < PROC_W * PROC_H; i++) {
+    const r = pixels[i*4], g = pixels[i*4+1], b = pixels[i*4+2];
+    const [h, s, v] = rgbToHsv(r, g, b);
+
+    const px = i % PROC_W, py = Math.floor(i / PROC_W);
+
+    if (hueInRange(h, hCenter, hTol) && s >= sMinP && s <= sMaxP && v >= vMinP && v <= vMaxP) {
+      blobCount++;
+      sumX += px; sumY += py;
+      sumH += h; sumS += s; sumV += v;
+      // Highlight: accent color tint
+      overlayData[i*4]   = 0;
+      overlayData[i*4+1] = 212;
+      overlayData[i*4+2] = 255;
+      overlayData[i*4+3] = 140;
+    } else {
+      // Darken non-matching
+      overlayData[i*4]   = 0;
+      overlayData[i*4+1] = 0;
+      overlayData[i*4+2] = 0;
+      overlayData[i*4+3] = 100;
+    }
+  }
+
+  const totalPx = PROC_W * PROC_H;
+  const blobPct = blobCount / totalPx * 100;
+  const threshPx = (noteThreshPct / 100) * totalPx;
+  const blobDetected = blobCount > threshPx;
+  const blobRelease = blobCount < threshPx * 0.7; // hysteresis
+
+  let cx = 0.5, cy = 0.5, avgH = hCenter, avgS = 50, avgV = 50;
+  if (blobCount > 0) {
+    cx = sumX / blobCount / PROC_W;
+    cy = sumY / blobCount / PROC_H;
+    avgH = sumH / blobCount;
+    avgS = sumS / blobCount;
+    avgV = sumV / blobCount;
+  }
+
+  // Smooth values
+  smoothedVals.x   = smooth(smoothedVals.x,   cx * 127);
+  smoothedVals.y   = smooth(smoothedVals.y,   cy * 127);
+  smoothedVals.sat = smooth(smoothedVals.sat, avgS / 100 * 127);
+  smoothedVals.val = smooth(smoothedVals.val, avgV / 100 * 127);
+  smoothedVals.area = smooth(smoothedVals.area, blobPct / 100 * 127);
+  smoothedVals.hue = smooth(smoothedVals.hue, avgH);
+
+  // ── NOTE ON / OFF ──
+  // Hue position within range → note
+  let huePos = 0.5;
+  if (blobDetected) {
+    let diff = avgH - hCenter;
+    if (diff > 180) diff -= 360;
+    if (diff < -180) diff += 360;
+    huePos = Math.max(0, Math.min(1, (diff + hTol) / (2 * hTol)));
+  }
+  const targetNote = getScaleNote(huePos, rootNote, scaleName, noteMin, noteMax);
+  const velocity = toggleStates.velFromSat ? Math.round(smoothedVals.sat) : 100;
+
+  if (blobDetected && !noteOnHysteresis) {
+    if (currentNote !== null && currentNote !== targetNote) sendNoteOff(currentNote);
+    currentNote = targetNote;
+    noteOnHysteresis = true;
+    sendNoteOn(currentNote, velocity);
+  } else if (blobDetected && noteOnHysteresis && currentNote !== targetNote) {
+    // Note changed — legato
+    sendNoteOff(currentNote);
+    currentNote = targetNote;
+    sendNoteOn(currentNote, velocity);
+  } else if (!blobDetected && blobRelease && noteOnHysteresis) {
+    if (currentNote !== null) sendNoteOff(currentNote);
+    currentNote = null;
+    noteOnHysteresis = false;
+  }
+
+  // ── CC OUTPUT ──
+  if (toggleStates.ccX)    sendCC(parseInt(document.getElementById('cc-x-num').value),   Math.round(smoothedVals.x));
+  if (toggleStates.ccY)    sendCC(parseInt(document.getElementById('cc-y-num').value),   Math.round(smoothedVals.y));
+  if (toggleStates.ccSat)  sendCC(parseInt(document.getElementById('cc-sat-num').value), Math.round(smoothedVals.sat));
+  if (toggleStates.ccVal)  sendCC(parseInt(document.getElementById('cc-val-num').value), Math.round(smoothedVals.val));
+  if (toggleStates.ccArea) sendCC(parseInt(document.getElementById('cc-area-num').value),Math.round(smoothedVals.area));
+
+  if (toggleStates.pitchBend && blobDetected) {
+    let diff = avgH - hCenter;
+    if (diff > 180) diff -= 360;
+    if (diff < -180) diff += 360;
+    const pbNorm = diff / hTol; // -1 to 1
+    const pb14 = Math.round(8192 + pbNorm * 8191);
+    sendPitchBend(Math.max(0, Math.min(16383, pb14)));
+  }
+
+  // ── RENDER ──
+  const dw = displayCanvas.width, dh = displayCanvas.height;
+  dCtx.clearRect(0, 0, dw, dh);
+
+  // Draw video
+  dCtx.save();
+  if (isMirrored) { dCtx.translate(dw, 0); dCtx.scale(-1, 1); }
+  dCtx.drawImage(video, 0, 0, dw, dh);
+  dCtx.restore();
+
+  // Draw overlay (scaled from PROC → display)
+  const overlayImageData = new ImageData(overlayData, PROC_W, PROC_H);
+  procCtx.putImageData(overlayImageData, 0, 0);
+  dCtx.globalAlpha = 0.5;
+  dCtx.drawImage(procCanvas, 0, 0, dw, dh);
+  dCtx.globalAlpha = 1;
+
+  // Draw centroid
+  if (blobDetected) {
+    const bx = cx * dw, by = cy * dh;
+    dCtx.strokeStyle = '#00d4ff';
+    dCtx.lineWidth = 2;
+    dCtx.beginPath(); dCtx.arc(bx, by, 18, 0, Math.PI*2); dCtx.stroke();
+    dCtx.beginPath(); dCtx.moveTo(bx-26,by); dCtx.lineTo(bx+26,by); dCtx.stroke();
+    dCtx.beginPath(); dCtx.moveTo(bx,by-26); dCtx.lineTo(bx,by+26); dCtx.stroke();
+
+    // Note label
+    dCtx.fillStyle = 'rgba(0,0,0,0.7)';
+    dCtx.fillRect(bx-28, by-50, 56, 22);
+    dCtx.fillStyle = '#00d4ff';
+    dCtx.font = 'bold 14px Space Mono, monospace';
+    dCtx.textAlign = 'center';
+    dCtx.fillText(midiToName(currentNote || targetNote), bx, by-33);
+  }
+
+  // ── UPDATE UI STATS ──
+  document.getElementById('stat-area').textContent = blobPct.toFixed(1) + '%';
+  document.getElementById('stat-hsv').textContent = blobDetected
+    ? `${Math.round(avgH)}° ${Math.round(avgS)}% ${Math.round(avgV)}%` : '—';
+  document.getElementById('stat-xy').textContent = blobDetected
+    ? `${Math.round(cx*100)}% ${Math.round(cy*100)}%` : '—';
+  document.getElementById('stat-note').textContent = (currentNote !== null)
+    ? midiToName(currentNote) : (blobDetected ? midiToName(targetNote) : '—');
+}
+
+// ── CANVAS RESIZE ────────────────────────────────────────────────
+function resizeDisplayCanvas() {
+  const wrap = document.getElementById('video-wrap');
+  displayCanvas.width = wrap.clientWidth;
+  displayCanvas.height = wrap.clientHeight;
+}
+
+// ── HUE SPECTRUM ────────────────────────────────────────────────
+function drawHueSpectrum() {
+  const w = hueSpecCanvas.clientWidth || 276;
+  hueSpecCanvas.width = w; hueSpecCanvas.height = 20;
+  const ctx = hueSpecCanvas.getContext('2d');
+  for (let x = 0; x < w; x++) {
+    const h = x / w * 360;
+    ctx.fillStyle = hsvToRgbStr(h, 80, 90);
+    ctx.fillRect(x, 0, 1, 20);
+  }
+  updateHueIndicator();
+}
+
+function updateHueIndicator() {
+  const center = parseInt(document.getElementById('hue-center').value);
+  const tol    = parseInt(document.getElementById('hue-tol').value);
+  const w = hueSpecCanvas.clientWidth || 276;
+  const indicator = document.getElementById('hue-range-indicator');
+  const centerLine = document.getElementById('hue-center-line');
+  const lo = Math.max(0, (center - tol) / 360 * 100);
+  const hi = Math.min(100, (center + tol) / 360 * 100);
+  indicator.style.left   = lo + '%';
+  indicator.style.width  = (hi - lo) + '%';
+  centerLine.style.left  = (center / 360 * 100) + '%';
+  // Update swatch
+  colorSwatch.style.background =
+    `linear-gradient(to right, ${hsvToRgbStr(center-tol,70,85)}, ${hsvToRgbStr(center,90,95)}, ${hsvToRgbStr(center+tol,70,85)})`;
+}
+
+// ── LEARN MODE ──────────────────────────────────────────────────
+learnBtn.addEventListener('click', () => {
+  learningMode = !learningMode;
+  learnOverlay.className = learningMode ? 'active' : '';
+  learnBtn.className = learningMode ? 'learning' : '';
+  learnBtn.textContent = learningMode ? '⏹ CANCEL' : '🎯 LEARN';
+});
+
+displayCanvas.addEventListener('click', e => {
+  if (!learningMode) return;
+  const rect = displayCanvas.getBoundingClientRect();
+  const xRatio = (e.clientX - rect.left) / rect.width;
+  const yRatio = (e.clientY - rect.top) / rect.height;
+  const px = Math.floor(xRatio * PROC_W);
+  const py = Math.floor(yRatio * PROC_H);
+
+  // Sample color from proc canvas
+  const sample = procCtx.getImageData(Math.max(0,px-2), Math.max(0,py-2), 5, 5).data;
+  let tr=0,tg=0,tb=0,tc=0;
+  for(let i=0;i<sample.length;i+=4){tr+=sample[i];tg+=sample[i+1];tb+=sample[i+2];tc++;}
+  const [h,s,v] = rgbToHsv(tr/tc, tg/tc, tb/tc);
+
+  document.getElementById('hue-center').value = Math.round(h);
+  document.getElementById('hue-tol').value = 20;
+  document.getElementById('s-min').value = Math.max(0, Math.round(s) - 20);
+  document.getElementById('s-max').value = 100;
+  document.getElementById('v-min').value = Math.max(0, Math.round(v) - 30);
+  document.getElementById('v-max').value = 100;
+  updateAllDisplayValues();
+  updateHueIndicator();
+
+  learningMode = false;
+  learnOverlay.className = '';
+  learnBtn.className = '';
+  learnBtn.textContent = '🎯 LEARN';
+});
+
+// ── SLIDER DISPLAY UPDATE ────────────────────────────────────────
+function updateAllDisplayValues() {
+  document.getElementById('hue-center-val').textContent = document.getElementById('hue-center').value + '°';
+  document.getElementById('hue-tol-val').textContent    = '±' + document.getElementById('hue-tol').value;
+  document.getElementById('s-min-val').textContent  = document.getElementById('s-min').value + '%';
+  document.getElementById('s-max-val').textContent  = document.getElementById('s-max').value + '%';
+  document.getElementById('v-min-val').textContent  = document.getElementById('v-min').value + '%';
+  document.getElementById('v-max-val').textContent  = document.getElementById('v-max').value + '%';
+  document.getElementById('note-min-val').textContent  = midiToName(parseInt(document.getElementById('note-min').value));
+  document.getElementById('note-max-val').textContent  = midiToName(parseInt(document.getElementById('note-max').value));
+  document.getElementById('note-thresh-val').textContent = document.getElementById('note-thresh').value + '%';
+}
+
+['hue-center','hue-tol','s-min','s-max','v-min','v-max','note-min','note-max','note-thresh'].forEach(id => {
+  document.getElementById(id).addEventListener('input', () => {
+    updateAllDisplayValues();
+    updateHueIndicator();
+  });
+});
+
+// ── TOGGLE SWITCHES ──────────────────────────────────────────────
+document.querySelectorAll('.toggle').forEach(t => {
+  t.addEventListener('click', () => {
+    const key = t.dataset.key;
+    if (!key) return;
+    toggleStates[key] = !toggleStates[key];
+    t.className = 'toggle' + (toggleStates[key] ? ' on' : '');
+  });
+});
+
+// ── HELP TOGGLE ──────────────────────────────────────────────────
+document.getElementById('help-toggle').addEventListener('click', () => {
+  const c = document.getElementById('help-content');
+  c.className = c.className === 'open' ? '' : 'open';
+});
+
+// ── MISC CONTROLS ────────────────────────────────────────────────
+document.getElementById('start-cam-btn').addEventListener('click', () => {
+  isRunning ? stopCamera() : startCamera();
+});
+document.getElementById('panic-btn').addEventListener('click', allNotesOff);
+document.getElementById('clear-log-btn').addEventListener('click', () => { logEntries=[]; renderLog(); });
+document.getElementById('midi-output-select').addEventListener('change', updateMidiOutput);
+document.getElementById('mirror-toggle').addEventListener('change', e => { isMirrored = e.target.checked; });
+
+// ── RESIZE ───────────────────────────────────────────────────────
+window.addEventListener('resize', () => { resizeDisplayCanvas(); drawHueSpectrum(); });
+
+// ── INIT ─────────────────────────────────────────────────────────
+initMIDI();
+resizeDisplayCanvas();
+updateAllDisplayValues();
+updateHueIndicator();
+setTimeout(drawHueSpectrum, 200); // after fonts/layout settle
+</script>
+</body>
+</html>
