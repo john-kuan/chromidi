@@ -272,7 +272,7 @@ input[type=range].green-track::-webkit-slider-thumb{background:var(--green);box-
   <div id="left-panel">
     <div id="video-wrap">
       <canvas id="display-canvas"></canvas>
-      <video id="video" autoplay playsinline muted></video>
+      <video id="video" autoplay playsinline muted style="display:none;"></video>
       <div id="no-cam">
         <div class="icon">📷</div>
         <div>Click <strong>START CAMERA</strong> to begin</div>
@@ -285,7 +285,7 @@ input[type=range].green-track::-webkit-slider-thumb{background:var(--green);box-
 
     <div id="stats-bar">
       <div class="stat">
-        <div class="stat-label">BLOB AREA</div>
+        <div class="stat-label">BLOBS</div>
         <div class="stat-val" id="stat-area">—</div>
       </div>
       <div class="stat">
@@ -419,7 +419,10 @@ input[type=range].green-track::-webkit-slider-thumb{background:var(--green);box-
         <div class="val-box" id="note-thresh-val">5%</div>
       </div>
       <div class="row" style="font-size:9px;color:var(--text-dim);">
-        GATE = min blob area% to trigger note on
+        GATE = min blob size% to trigger note on
+      </div>
+      <div class="row" style="font-size:9px;color:var(--text-dim);margin-top:4px;">
+        Up to 4 blobs → Ch1, Ch2, Ch3, Ch4 automatically
       </div>
     </div>
 
@@ -498,20 +501,17 @@ input[type=range].green-track::-webkit-slider-thumb{background:var(--green);box-
       <h4>1. Start Camera</h4>
       <p>Click <code>▶ START CAMERA</code> and allow camera access.</p>
       <h4>2. Pick a Color</h4>
-      <p>Click <code>🎯 LEARN</code> then click any color in the video to set the detection target. Or drag the <code>HUE / TOL± / S / V</code> sliders manually.</p>
+      <p>Click <code>🎯 LEARN</code>, then click directly on a color in the video feed to auto-tune the detection. Or dial in <code>HUE / TOL± / S / V</code> manually.</p>
       <h4>3. Connect MIDI</h4>
-      <p>Open a DAW or virtual MIDI port first. Select it from the header dropdown. MIDI uses WebMIDI (Chrome only).</p>
+      <p>Open a DAW or enable a virtual MIDI port first, then select it in the header dropdown.</p>
       <h4>4. Play!</h4>
-      <p>Move a colored object into frame. The detected hue position within your range maps to a MIDI note. Saturation, brightness, and blob position control CCs. When the blob disappears below the <code>GATE</code> threshold, a Note Off fires.</p>
+      <p>CHROMIDI tracks up to 4 separate color blobs simultaneously. Each blob fires on a different MIDI channel (Ch1–Ch4). X position of each blob maps to a scale note. Saturation, brightness, and position control CCs from the primary blob.</p>
       <h4>Tips</h4>
-      <p>Bright, saturated objects work best. Use a coloured cloth, LED, or even a printed card. Try the <code>MIRROR</code> option for live performance.</p>
+      <p>Use bright, saturated objects — coloured tape on your hands works great. Increase <code>TOL±</code> if detection is patchy. Lower <code>GATE</code> to detect small objects. Mirror mode is useful for live performance so movement feels natural.</p>
     </div>
 
   </div><!-- /right-panel -->
 </div><!-- /main -->
-
-<!-- ════════════ VIDEO (hidden) ════════════ -->
-<video id="video" autoplay playsinline muted style="display:none;"></video>
 
 <script>
 // ═══════════════════════════════════════════════════════════════
@@ -581,18 +581,109 @@ function hueInRange(h, center, tol) {
 // ── STATE ───────────────────────────────────────────────────────
 let midiAccess = null;
 let midiOutput = null;
-let currentNote = null;
 let isRunning = false;
 let learningMode = false;
 let isMirrored = false;
 let lastCCVals = {};
 let smoothedVals = { x: 0, y: 0, sat: 0, val: 0, area: 0, hue: 180 };
-let noteOnHysteresis = false; // true when note is currently on
+
+// Multi-blob note tracking — up to 4 simultaneous blobs
+const MAX_BLOBS = 4;
+const BLOB_COLORS = ['#00d4ff','#ff2060','#40ff80','#ffd030']; // per-blob display colors
+// Per-blob note state
+const blobNoteState = Array.from({length: MAX_BLOBS}, () => ({
+  note: null, active: false, smoothX: 64, smoothY: 64
+}));
 
 const toggleStates = {
   ccX: true, ccY: true, ccSat: true, ccVal: true,
   ccArea: false, pitchBend: false, velFromSat: false
 };
+
+// ── CONNECTED COMPONENTS (BFS on downsampled mask) ───────────────
+const DS = 6; // downsample factor (1 proc pixel = 1/DS grid cell)
+const DSW = Math.ceil(320 / DS);  // ~54
+const DSH = Math.ceil(240 / DS);  // 40
+const dsMask   = new Uint8Array(DSW * DSH);
+const dsLabels = new Int16Array(DSW * DSH);
+const bfsQueue = new Int32Array(DSW * DSH);
+
+function findBlobs(mask, procW, procH, minBlobPx) {
+  // 1. Build downsampled occupancy grid
+  dsMask.fill(0);
+  for (let y = 0; y < procH; y++) {
+    for (let x = 0; x < procW; x++) {
+      if (mask[y * procW + x]) {
+        const dy = Math.floor(y / DS), dx = Math.floor(x / DS);
+        dsMask[dy * DSW + dx]++;
+      }
+    }
+  }
+  // 2. Threshold: cell must have ≥ threshold hits (noise filter)
+  const CELL_THRESH = Math.ceil(DS * DS * 0.25); // 25% of cell pixels
+  for (let i = 0; i < DSW * DSH; i++) {
+    dsMask[i] = dsMask[i] >= CELL_THRESH ? 1 : 0;
+  }
+  // 3. BFS labeling
+  dsLabels.fill(0);
+  let numLabels = 0;
+  const rawBlobs = [];
+
+  for (let start = 0; start < DSW * DSH; start++) {
+    if (!dsMask[start] || dsLabels[start]) continue;
+    numLabels++;
+    dsLabels[start] = numLabels;
+    let head = 0, tail = 0;
+    bfsQueue[tail++] = start;
+    let cellCount = 0;
+
+    while (head < tail) {
+      const cur = bfsQueue[head++];
+      cellCount++;
+      const cx = cur % DSW, cy = Math.floor(cur / DSW);
+      // 4-connected neighbors
+      if (cx > 0)       { const n=cur-1;    if(dsMask[n]&&!dsLabels[n]){dsLabels[n]=numLabels;bfsQueue[tail++]=n;} }
+      if (cx < DSW-1)   { const n=cur+1;    if(dsMask[n]&&!dsLabels[n]){dsLabels[n]=numLabels;bfsQueue[tail++]=n;} }
+      if (cy > 0)       { const n=cur-DSW;  if(dsMask[n]&&!dsLabels[n]){dsLabels[n]=numLabels;bfsQueue[tail++]=n;} }
+      if (cy < DSH-1)   { const n=cur+DSW;  if(dsMask[n]&&!dsLabels[n]){dsLabels[n]=numLabels;bfsQueue[tail++]=n;} }
+    }
+    rawBlobs.push({ label: numLabels, cellCount });
+  }
+
+  if (!rawBlobs.length) return [];
+
+  // 4. Compute per-blob centroid and HSV stats from original full-res mask pixels
+  //    Only keep blobs above minBlobPx
+  const minCells = Math.ceil(minBlobPx / (DS * DS));
+  const validBlobs = rawBlobs.filter(b => b.cellCount >= minCells);
+  if (!validBlobs.length) return [];
+
+  // Sort by size, take top MAX_BLOBS
+  validBlobs.sort((a,b) => b.cellCount - a.cellCount);
+  const topBlobs = validBlobs.slice(0, MAX_BLOBS);
+
+  // Build label → blob index map
+  const labelToIdx = new Map();
+  topBlobs.forEach((b,i) => labelToIdx.set(b.label, i));
+
+  // Accumulate centroid from downsample grid
+  const stats = topBlobs.map(() => ({ sumCX:0, sumCY:0, count:0 }));
+  for (let i = 0; i < DSW * DSH; i++) {
+    const lbl = dsLabels[i];
+    if (!lbl || !labelToIdx.has(lbl)) continue;
+    const idx = labelToIdx.get(lbl);
+    stats[idx].sumCX += (i % DSW) * DS + DS/2;
+    stats[idx].sumCY += Math.floor(i / DSW) * DS + DS/2;
+    stats[idx].count++;
+  }
+
+  return topBlobs.map((b, i) => ({
+    cx: stats[i].count ? stats[i].sumCX / stats[i].count / procW : 0.5,
+    cy: stats[i].count ? stats[i].sumCY / stats[i].count / procH : 0.5,
+    areaPx: b.cellCount * DS * DS,
+    areaFrac: b.cellCount * DS * DS / (procW * procH),
+  }));
+}
 
 // Processing canvas (smaller for perf)
 const PROC_W = 320, PROC_H = 240;
@@ -656,21 +747,22 @@ function updateMidiOutput() {
 // ── MIDI SEND ───────────────────────────────────────────────────
 function getChannel() { return parseInt(document.getElementById('midi-ch').value) || 0; }
 
-function sendNoteOn(note, vel) {
+function sendNoteOn(note, vel) { sendNoteOnCh(note, vel, getChannel()); }
+function sendNoteOff(note)     { sendNoteOffCh(note, getChannel()); }
+
+function sendNoteOnCh(note, vel, ch) {
   if (!midiOutput) return;
-  const ch = getChannel();
   vel = Math.max(1, Math.min(127, vel));
-  midiOutput.send([0x90 | ch, note, vel]);
+  midiOutput.send([0x90 | (ch & 0xF), note, vel]);
   midiStatusDot.className = 'active';
-  setTimeout(() => midiStatusDot.className = 'ok', 80);
-  addLog('noteon', `NOTE ON  ${midiToName(note)} vel:${vel}`);
+  setTimeout(() => { if(midiStatusDot.className==='active') midiStatusDot.className = 'ok'; }, 80);
+  addLog('noteon', `CH${ch+1} NOTE ON ${midiToName(note)} v:${vel}`);
 }
 
-function sendNoteOff(note) {
+function sendNoteOffCh(note, ch) {
   if (!midiOutput) return;
-  const ch = getChannel();
-  midiOutput.send([0x80 | ch, note, 0]);
-  addLog('noteoff', `NOTE OFF ${midiToName(note)}`);
+  midiOutput.send([0x80 | (ch & 0xF), note, 0]);
+  addLog('noteoff', `CH${ch+1} NOTE OFF ${midiToName(note)}`);
 }
 
 function sendCC(ccNum, val) {
@@ -696,7 +788,7 @@ function allNotesOff() {
   for (let ch = 0; ch < 16; ch++) {
     midiOutput.send([0xB0 | ch, 123, 0]);
   }
-  if (currentNote !== null) { currentNote = null; noteOnHysteresis = false; }
+  blobNoteState.forEach(s => { s.note = null; s.active = false; });
   addLog('cc', 'ALL NOTES OFF');
 }
 
@@ -747,6 +839,10 @@ function stopCamera() {
 // ── MAIN PROCESSING LOOP ─────────────────────────────────────────
 function smooth(prev, next, f = 0.25) { return prev + (next - prev) * f; }
 
+// Reusable typed arrays for per-frame processing
+const binaryMask = new Uint8Array(PROC_W * PROC_H);
+const overlayData = new Uint8ClampedArray(PROC_W * PROC_H * 4);
+
 function mainLoop() {
   if (!isRunning) return;
   requestAnimationFrame(mainLoop);
@@ -774,99 +870,94 @@ function mainLoop() {
   const scaleName = document.getElementById('scale-select').value;
   const rootNote = parseInt(document.getElementById('root-note').value);
 
-  // ── HSV ANALYSIS ──
-  let blobCount = 0;
-  let sumX = 0, sumY = 0, sumH = 0, sumS = 0, sumV = 0;
-  const overlayData = new Uint8ClampedArray(PROC_W * PROC_H * 4);
+  // ── BUILD BINARY MASK + OVERLAY ──
+  let totalMatchPx = 0;
+  let sumH = 0, sumS = 0, sumV = 0;
 
   for (let i = 0; i < PROC_W * PROC_H; i++) {
-    const r = pixels[i*4], g = pixels[i*4+1], b = pixels[i*4+2];
+    const ri = i * 4;
+    const r = pixels[ri], g = pixels[ri+1], b = pixels[ri+2];
     const [h, s, v] = rgbToHsv(r, g, b);
 
-    const px = i % PROC_W, py = Math.floor(i / PROC_W);
-
     if (hueInRange(h, hCenter, hTol) && s >= sMinP && s <= sMaxP && v >= vMinP && v <= vMaxP) {
-      blobCount++;
-      sumX += px; sumY += py;
+      binaryMask[i] = 1;
+      totalMatchPx++;
       sumH += h; sumS += s; sumV += v;
-      // Highlight: accent color tint
-      overlayData[i*4]   = 0;
-      overlayData[i*4+1] = 212;
-      overlayData[i*4+2] = 255;
-      overlayData[i*4+3] = 140;
+      overlayData[ri] = 0; overlayData[ri+1] = 212; overlayData[ri+2] = 255; overlayData[ri+3] = 150;
     } else {
-      // Darken non-matching
-      overlayData[i*4]   = 0;
-      overlayData[i*4+1] = 0;
-      overlayData[i*4+2] = 0;
-      overlayData[i*4+3] = 100;
+      binaryMask[i] = 0;
+      overlayData[ri] = 0; overlayData[ri+1] = 0; overlayData[ri+2] = 0; overlayData[ri+3] = 90;
     }
   }
 
   const totalPx = PROC_W * PROC_H;
-  const blobPct = blobCount / totalPx * 100;
-  const threshPx = (noteThreshPct / 100) * totalPx;
-  const blobDetected = blobCount > threshPx;
-  const blobRelease = blobCount < threshPx * 0.7; // hysteresis
+  const totalMatchPct = totalMatchPx / totalPx * 100;
+  const minBlobPx = (noteThreshPct / 100) * totalPx * 0.3; // per-blob minimum
 
-  let cx = 0.5, cy = 0.5, avgH = hCenter, avgS = 50, avgV = 50;
-  if (blobCount > 0) {
-    cx = sumX / blobCount / PROC_W;
-    cy = sumY / blobCount / PROC_H;
-    avgH = sumH / blobCount;
-    avgS = sumS / blobCount;
-    avgV = sumV / blobCount;
+  const avgH = totalMatchPx > 0 ? sumH / totalMatchPx : hCenter;
+  const avgS = totalMatchPx > 0 ? sumS / totalMatchPx : 50;
+  const avgV = totalMatchPx > 0 ? sumV / totalMatchPx : 50;
+
+  // Smooth global HSV
+  smoothedVals.sat  = smooth(smoothedVals.sat,  avgS / 100 * 127);
+  smoothedVals.val  = smooth(smoothedVals.val,  avgV / 100 * 127);
+  smoothedVals.area = smooth(smoothedVals.area, totalMatchPct / 100 * 127);
+  smoothedVals.hue  = smooth(smoothedVals.hue, avgH);
+
+  // ── FIND BLOBS (connected components BFS) ──
+  const blobs = findBlobs(binaryMask, PROC_W, PROC_H, minBlobPx);
+
+  // ── NOTE ON/OFF PER BLOB ──
+  const ch = getChannel();
+  const velocity = toggleStates.velFromSat ? Math.max(1, Math.round(smoothedVals.sat)) : 100;
+
+  for (let bi = 0; bi < MAX_BLOBS; bi++) {
+    const state = blobNoteState[bi];
+    const blob = blobs[bi];
+
+    if (blob) {
+      // Map blob X position to note (left=low, right=high)
+      const notePos = Math.max(0, Math.min(1, blob.cx));
+      const targetNote = getScaleNote(notePos, rootNote, scaleName, noteMin, noteMax);
+      state.smoothX = smooth(state.smoothX, blob.cx * 127);
+      state.smoothY = smooth(state.smoothY, blob.cy * 127);
+
+      if (!state.active) {
+        state.note = targetNote;
+        state.active = true;
+        sendNoteOnCh(targetNote, velocity, ch + bi < 16 ? ch + bi : ch);
+      } else if (state.note !== targetNote) {
+        sendNoteOffCh(state.note, ch + bi < 16 ? ch + bi : ch);
+        state.note = targetNote;
+        sendNoteOnCh(targetNote, velocity, ch + bi < 16 ? ch + bi : ch);
+      }
+    } else {
+      // Blob gone — send note off
+      if (state.active && state.note !== null) {
+        sendNoteOffCh(state.note, ch + bi < 16 ? ch + bi : ch);
+        state.note = null;
+        state.active = false;
+      }
+    }
   }
 
-  // Smooth values
-  smoothedVals.x   = smooth(smoothedVals.x,   cx * 127);
-  smoothedVals.y   = smooth(smoothedVals.y,   cy * 127);
-  smoothedVals.sat = smooth(smoothedVals.sat, avgS / 100 * 127);
-  smoothedVals.val = smooth(smoothedVals.val, avgV / 100 * 127);
-  smoothedVals.area = smooth(smoothedVals.area, blobPct / 100 * 127);
-  smoothedVals.hue = smooth(smoothedVals.hue, avgH);
+  // ── CC OUTPUT (use primary blob or global) ──
+  const primary = blobs[0];
+  const pX = primary ? smooth(blobNoteState[0].smoothX, blobNoteState[0].smoothX) : smoothedVals.x;
+  const pY = primary ? smooth(blobNoteState[0].smoothY, blobNoteState[0].smoothY) : smoothedVals.y;
+  smoothedVals.x = smooth(smoothedVals.x, primary ? primary.cx * 127 : smoothedVals.x);
+  smoothedVals.y = smooth(smoothedVals.y, primary ? primary.cy * 127 : smoothedVals.y);
 
-  // ── NOTE ON / OFF ──
-  // Hue position within range → note
-  let huePos = 0.5;
-  if (blobDetected) {
-    let diff = avgH - hCenter;
-    if (diff > 180) diff -= 360;
-    if (diff < -180) diff += 360;
-    huePos = Math.max(0, Math.min(1, (diff + hTol) / (2 * hTol)));
-  }
-  const targetNote = getScaleNote(huePos, rootNote, scaleName, noteMin, noteMax);
-  const velocity = toggleStates.velFromSat ? Math.round(smoothedVals.sat) : 100;
-
-  if (blobDetected && !noteOnHysteresis) {
-    if (currentNote !== null && currentNote !== targetNote) sendNoteOff(currentNote);
-    currentNote = targetNote;
-    noteOnHysteresis = true;
-    sendNoteOn(currentNote, velocity);
-  } else if (blobDetected && noteOnHysteresis && currentNote !== targetNote) {
-    // Note changed — legato
-    sendNoteOff(currentNote);
-    currentNote = targetNote;
-    sendNoteOn(currentNote, velocity);
-  } else if (!blobDetected && blobRelease && noteOnHysteresis) {
-    if (currentNote !== null) sendNoteOff(currentNote);
-    currentNote = null;
-    noteOnHysteresis = false;
-  }
-
-  // ── CC OUTPUT ──
   if (toggleStates.ccX)    sendCC(parseInt(document.getElementById('cc-x-num').value),   Math.round(smoothedVals.x));
   if (toggleStates.ccY)    sendCC(parseInt(document.getElementById('cc-y-num').value),   Math.round(smoothedVals.y));
   if (toggleStates.ccSat)  sendCC(parseInt(document.getElementById('cc-sat-num').value), Math.round(smoothedVals.sat));
   if (toggleStates.ccVal)  sendCC(parseInt(document.getElementById('cc-val-num').value), Math.round(smoothedVals.val));
   if (toggleStates.ccArea) sendCC(parseInt(document.getElementById('cc-area-num').value),Math.round(smoothedVals.area));
 
-  if (toggleStates.pitchBend && blobDetected) {
+  if (toggleStates.pitchBend && primary) {
     let diff = avgH - hCenter;
-    if (diff > 180) diff -= 360;
-    if (diff < -180) diff += 360;
-    const pbNorm = diff / hTol; // -1 to 1
-    const pb14 = Math.round(8192 + pbNorm * 8191);
+    if (diff > 180) diff -= 360; if (diff < -180) diff += 360;
+    const pb14 = Math.round(8192 + (diff / hTol) * 8191);
     sendPitchBend(Math.max(0, Math.min(16383, pb14)));
   }
 
@@ -880,39 +971,46 @@ function mainLoop() {
   dCtx.drawImage(video, 0, 0, dw, dh);
   dCtx.restore();
 
-  // Draw overlay (scaled from PROC → display)
-  const overlayImageData = new ImageData(overlayData, PROC_W, PROC_H);
-  procCtx.putImageData(overlayImageData, 0, 0);
-  dCtx.globalAlpha = 0.5;
+  // Overlay matched pixels
+  const overlayImg = new ImageData(overlayData, PROC_W, PROC_H);
+  procCtx.putImageData(overlayImg, 0, 0);
+  dCtx.globalAlpha = 0.45;
   dCtx.drawImage(procCanvas, 0, 0, dw, dh);
   dCtx.globalAlpha = 1;
 
-  // Draw centroid
-  if (blobDetected) {
-    const bx = cx * dw, by = cy * dh;
-    dCtx.strokeStyle = '#00d4ff';
-    dCtx.lineWidth = 2;
-    dCtx.beginPath(); dCtx.arc(bx, by, 18, 0, Math.PI*2); dCtx.stroke();
-    dCtx.beginPath(); dCtx.moveTo(bx-26,by); dCtx.lineTo(bx+26,by); dCtx.stroke();
-    dCtx.beginPath(); dCtx.moveTo(bx,by-26); dCtx.lineTo(bx,by+26); dCtx.stroke();
+  // Draw blob crosshairs + note labels
+  blobs.forEach((blob, bi) => {
+    const bx = blob.cx * dw, by = blob.cy * dh;
+    const col = BLOB_COLORS[bi];
+    const noteForBlob = blobNoteState[bi].note;
 
-    // Note label
-    dCtx.fillStyle = 'rgba(0,0,0,0.7)';
-    dCtx.fillRect(bx-28, by-50, 56, 22);
-    dCtx.fillStyle = '#00d4ff';
-    dCtx.font = 'bold 14px Space Mono, monospace';
+    dCtx.strokeStyle = col;
+    dCtx.lineWidth = 2.5;
+    const r = 20 + bi * 5;
+    dCtx.beginPath(); dCtx.arc(bx, by, r, 0, Math.PI * 2); dCtx.stroke();
+    dCtx.beginPath(); dCtx.moveTo(bx - r-8, by); dCtx.lineTo(bx + r+8, by); dCtx.stroke();
+    dCtx.beginPath(); dCtx.moveTo(bx, by - r-8); dCtx.lineTo(bx, by + r+8); dCtx.stroke();
+
+    // Blob index badge
+    dCtx.fillStyle = col;
+    dCtx.font = 'bold 11px Space Mono, monospace';
     dCtx.textAlign = 'center';
-    dCtx.fillText(midiToName(currentNote || targetNote), bx, by-33);
-  }
+    const label = noteForBlob ? `${bi+1}: ${midiToName(noteForBlob)}` : `${bi+1}`;
+    dCtx.fillStyle = 'rgba(0,0,0,0.75)';
+    const lw = dCtx.measureText(label).width;
+    dCtx.fillRect(bx - lw/2 - 4, by - r - 22, lw + 8, 18);
+    dCtx.fillStyle = col;
+    dCtx.fillText(label, bx, by - r - 8);
+  });
 
   // ── UPDATE UI STATS ──
-  document.getElementById('stat-area').textContent = blobPct.toFixed(1) + '%';
-  document.getElementById('stat-hsv').textContent = blobDetected
+  document.getElementById('stat-area').textContent = blobs.length + ' blob' + (blobs.length !== 1 ? 's' : '');
+  document.getElementById('stat-hsv').textContent = blobs.length
     ? `${Math.round(avgH)}° ${Math.round(avgS)}% ${Math.round(avgV)}%` : '—';
-  document.getElementById('stat-xy').textContent = blobDetected
-    ? `${Math.round(cx*100)}% ${Math.round(cy*100)}%` : '—';
-  document.getElementById('stat-note').textContent = (currentNote !== null)
-    ? midiToName(currentNote) : (blobDetected ? midiToName(targetNote) : '—');
+  document.getElementById('stat-xy').textContent = blobs[0]
+    ? `${Math.round(blobs[0].cx * 100)}% ${Math.round(blobs[0].cy * 100)}%` : '—';
+  const activeNotes = blobNoteState.filter(s => s.active && s.note !== null).map(s => midiToName(s.note));
+  document.getElementById('stat-note').textContent = activeNotes.length ? activeNotes.join(' ') : '—';
 }
 
 // ── CANVAS RESIZE ────────────────────────────────────────────────
@@ -959,25 +1057,41 @@ learnBtn.addEventListener('click', () => {
   learnBtn.textContent = learningMode ? '⏹ CANCEL' : '🎯 LEARN';
 });
 
-displayCanvas.addEventListener('click', e => {
+// Fix: click handler on the OVERLAY (which intercepts clicks in learn mode), not the canvas beneath
+learnOverlay.addEventListener('click', e => {
   if (!learningMode) return;
-  const rect = displayCanvas.getBoundingClientRect();
-  const xRatio = (e.clientX - rect.left) / rect.width;
+  // Map overlay click coords → proc canvas coords
+  const rect = learnOverlay.getBoundingClientRect();
+  let xRatio = (e.clientX - rect.left) / rect.width;
   const yRatio = (e.clientY - rect.top) / rect.height;
-  const px = Math.floor(xRatio * PROC_W);
-  const py = Math.floor(yRatio * PROC_H);
+  // Account for mirror flip — procCanvas is already drawn mirrored, display canvas too
+  // so ratios map directly
+  const px = Math.max(0, Math.min(PROC_W - 6, Math.floor(xRatio * PROC_W)));
+  const py = Math.max(0, Math.min(PROC_H - 6, Math.floor(yRatio * PROC_H)));
 
-  // Sample color from proc canvas
-  const sample = procCtx.getImageData(Math.max(0,px-2), Math.max(0,py-2), 5, 5).data;
-  let tr=0,tg=0,tb=0,tc=0;
-  for(let i=0;i<sample.length;i+=4){tr+=sample[i];tg+=sample[i+1];tb+=sample[i+2];tc++;}
-  const [h,s,v] = rgbToHsv(tr/tc, tg/tc, tb/tc);
+  // Sample a 9x9 region from proc canvas (drawn with latest video frame)
+  const RADIUS = 4;
+  const sx = Math.max(0, px - RADIUS), sy = Math.max(0, py - RADIUS);
+  const sw = Math.min(PROC_W - sx, RADIUS*2+1), sh = Math.min(PROC_H - sy, RADIUS*2+1);
+  const sample = procCtx.getImageData(sx, sy, sw, sh).data;
+
+  // Collect HSV values, use median-ish (exclude outliers by collecting all then picking centre)
+  const hs=[], ss=[], vs=[];
+  for (let i = 0; i < sample.length; i += 4) {
+    const [h, s, v] = rgbToHsv(sample[i], sample[i+1], sample[i+2]);
+    if (s > 5 && v > 5) { hs.push(h); ss.push(s); vs.push(v); }
+  }
+  if (hs.length === 0) return; // sampled a near-black or near-white area
+
+  hs.sort((a,b)=>a-b); ss.sort((a,b)=>a-b); vs.sort((a,b)=>a-b);
+  const mid = Math.floor(hs.length / 2);
+  const h = hs[mid], s = ss[mid], v = vs[mid];
 
   document.getElementById('hue-center').value = Math.round(h);
-  document.getElementById('hue-tol').value = 20;
-  document.getElementById('s-min').value = Math.max(0, Math.round(s) - 20);
+  document.getElementById('hue-tol').value = 18;
+  document.getElementById('s-min').value = Math.max(0, Math.round(s) - 25);
   document.getElementById('s-max').value = 100;
-  document.getElementById('v-min').value = Math.max(0, Math.round(v) - 30);
+  document.getElementById('v-min').value = Math.max(0, Math.round(v) - 35);
   document.getElementById('v-max').value = 100;
   updateAllDisplayValues();
   updateHueIndicator();
